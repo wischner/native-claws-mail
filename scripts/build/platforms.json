@@ -1,0 +1,99 @@
+{
+    "linux-sdl2": {
+        "image": "wischner/gcc-x86_64-linux-sdl:latest",
+        "cmake": [
+            "-DTOOLKIT=SDL2"
+        ],
+        "run": [
+            "env",
+            "SDL_VIDEODRIVER=dummy",
+            "SDL_RENDER_DRIVER=software"
+        ]
+    },
+    "linux-x11": {
+        "image": "wischner/gcc-x86_64-linux-x11:latest",
+        "cmake": [
+            "-DTOOLKIT=X11"
+        ],
+        "run": [
+            "xvfb-run",
+            "-a"
+        ],
+        "session": "x11"
+    },
+    "linux-motif": {
+        "image": "wischner/gcc-x86_64-linux-motif:latest",
+        "cmake": [
+            "-DTOOLKIT=MOTIF"
+        ],
+        "run": [
+            "xvfb-run",
+            "-a"
+        ],
+        "session": "cde-xephyr"
+    },
+    "linux-openlook": {
+        "image": "wischner/gcc-x86_64-linux-openlook:latest",
+        "cmake": [
+            "-DTOOLKIT=OPENLOOK"
+        ],
+        "run": [
+            "xvfb-run",
+            "-a"
+        ],
+        "session": "openlook-xephyr"
+    },
+    "linux-wmaker": {
+        "image": "wischner/gcc-x86_64-linux-window-maker:latest",
+        "cmake": [
+            "-DTOOLKIT=WMAKER"
+        ],
+        "run": [
+            "xvfb-run",
+            "-a"
+        ],
+        "session": "window-maker-xephyr"
+    },
+    "linux-gemix-gemd": {
+        "image": "wischner/gcc-x86_64-gemix:latest",
+        "cmake": [
+            "-DTOOLKIT=GEMIX",
+            "-DGEMIX_USE_GEMD=ON"
+        ],
+        "run": [
+            "env",
+            "GEM_RASTA_INVERSE=off",
+            "GEM_RASTA_FRAMEBUFFER=/tmp/blaise.fb",
+            "GEM_RASTA_PORT=5044",
+            "bash",
+            "{native}/scripts/gemix/gemd-session.sh"
+        ],
+        "session": "gemix",
+        "gemd": true
+    },
+    "haiku": {
+        "image": "wischner/gcc-x86_64-haiku:1.1.0",
+        "cmake": [
+            "-DCMAKE_TOOLCHAIN_FILE={native}/scripts/cmake/toolchain-haiku.cmake"
+        ]
+    },
+    "linux-wayland": {
+        "image": "native-wayland-sdk:24.04",
+        "cmake": [
+            "-DTOOLKIT=WAYLAND"
+        ]
+    },
+    "linux-elementary": {
+        "image": "native-wayland-sdk:24.04",
+        "cmake": [
+            "-DTOOLKIT=ELEMENTARY"
+        ]
+    },
+    "windows": {
+        "image": "native-windows-winui-sdk:24.04",
+        "cmake": [
+            "-DCMAKE_TOOLCHAIN_FILE={native}/scripts/cmake/toolchain-mingw.cmake"
+        ],
+        "suffix": ".exe"
+    }
+}

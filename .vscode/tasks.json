@@ -1,0 +1,147 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build SDL2, Local",
+            "type": "shell",
+            "command": "make -j8 debug",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "Build X11, Xephyr",
+            "type": "process",
+            "command": "python3",
+            "args": [
+                "-B",
+                "scripts/build/platforms.py",
+                "linux-x11",
+                "--mode",
+                "debug",
+                "--build-only"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Motif, Xephyr",
+            "type": "process",
+            "command": "python3",
+            "args": [
+                "-B",
+                "scripts/build/platforms.py",
+                "linux-motif",
+                "--mode",
+                "debug",
+                "--build-only"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build OPEN LOOK, Xephyr",
+            "type": "process",
+            "command": "python3",
+            "args": [
+                "-B",
+                "scripts/build/platforms.py",
+                "linux-openlook",
+                "--mode",
+                "debug",
+                "--build-only"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Window Maker, Xephyr",
+            "type": "process",
+            "command": "python3",
+            "args": [
+                "-B",
+                "scripts/build/platforms.py",
+                "linux-wmaker",
+                "--mode",
+                "debug",
+                "--build-only"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build GEM, Rasta",
+            "type": "process",
+            "command": "python3",
+            "args": [
+                "-B",
+                "scripts/build/platforms.py",
+                "linux-gemix-gemd",
+                "--mode",
+                "debug",
+                "--build-only"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Haiku, VM",
+            "type": "process",
+            "command": "python3",
+            "args": [
+                "-B",
+                "scripts/build/platforms.py",
+                "haiku",
+                "--mode",
+                "debug",
+                "--build-only"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Deploy Haiku, VM",
+            "type": "process",
+            "command": "python3",
+            "args": [
+                "-B",
+                "${workspaceFolder}/scripts/debug/remote.py",
+                "deploy-haiku"
+            ],
+            "dependsOn": "Build Haiku, VM",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test all platforms",
+            "type": "shell",
+            "command": "make platform-test",
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test blaise",
+            "type": "shell",
+            "command": "make -j8 test",
+            "group": "test",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        }
+    ]
+}

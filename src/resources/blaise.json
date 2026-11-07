@@ -1,0 +1,320 @@
+{
+    "version": 1,
+    "resources": [
+        {
+            "name": "icons.toolbar.fileNew",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/fileNew.png"
+                },
+                {
+                    "file": "icons/monochrome/fileNew.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.fileOpen",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/fileOpen.png"
+                },
+                {
+                    "file": "icons/monochrome/fileOpen.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.fileSave",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/fileSave.png"
+                },
+                {
+                    "file": "icons/monochrome/fileSave.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.undo",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/undo.png"
+                },
+                {
+                    "file": "icons/monochrome/undo.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.redo",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/redo.png"
+                },
+                {
+                    "file": "icons/monochrome/redo.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.cut",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/cut.png"
+                },
+                {
+                    "file": "icons/monochrome/cut.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.copy",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/copy.png"
+                },
+                {
+                    "file": "icons/monochrome/copy.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.paste",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/paste.png"
+                },
+                {
+                    "file": "icons/monochrome/paste.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.find",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/find.png"
+                },
+                {
+                    "file": "icons/monochrome/find.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.getMail",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/getMail.png"
+                },
+                {
+                    "file": "icons/monochrome/getMail.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.sendMail",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/sendMail.png"
+                },
+                {
+                    "file": "icons/monochrome/sendMail.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.reply",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/reply.png"
+                },
+                {
+                    "file": "icons/monochrome/reply.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.replyAll",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/replyAll.png"
+                },
+                {
+                    "file": "icons/monochrome/replyAll.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.forward",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/forward.png"
+                },
+                {
+                    "file": "icons/monochrome/forward.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.deleteMail",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/deleteMail.png"
+                },
+                {
+                    "file": "icons/monochrome/deleteMail.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.nextUnread",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/nextUnread.png"
+                },
+                {
+                    "file": "icons/monochrome/nextUnread.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.previousUnread",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/previousUnread.png"
+                },
+                {
+                    "file": "icons/monochrome/previousUnread.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.markMessage",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/markMessage.png"
+                },
+                {
+                    "file": "icons/monochrome/markMessage.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.addressBook",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/addressBook.png"
+                },
+                {
+                    "file": "icons/monochrome/addressBook.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.attachFile",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/attachFile.png"
+                },
+                {
+                    "file": "icons/monochrome/attachFile.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "icons.toolbar.threadView",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "icons/color/threadView.png"
+                },
+                {
+                    "file": "icons/monochrome/threadView.png",
+                    "when": {
+                        "color": "monochrome"
+                    }
+                }
+            ]
+        }
+    ]
+}

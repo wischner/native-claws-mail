@@ -1,0 +1,137 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "SDL2, Local",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/blaise-debug",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "environment": [],
+            "preLaunchTask": "Build SDL2, Local",
+            "externalConsole": false
+        },
+        {
+            "name": "X11, Xephyr",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/platforms/linux-x11/debug/bin/blaise",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "preLaunchTask": "Build X11, Xephyr",
+            "externalConsole": false,
+            "pipeTransport": {
+                "pipeProgram": "python3",
+                "pipeArgs": [
+                    "${workspaceFolder}/scripts/debug/linux.py",
+                    "linux-x11"
+                ],
+                "debuggerPath": "/usr/bin/gdb",
+                "pipeCwd": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Motif, Xephyr",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/platforms/linux-motif/debug/bin/blaise",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "preLaunchTask": "Build Motif, Xephyr",
+            "externalConsole": false,
+            "pipeTransport": {
+                "pipeProgram": "python3",
+                "pipeArgs": [
+                    "${workspaceFolder}/scripts/debug/linux.py",
+                    "linux-motif"
+                ],
+                "debuggerPath": "/usr/bin/gdb",
+                "pipeCwd": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "OPEN LOOK, Xephyr",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/platforms/linux-openlook/debug/bin/blaise",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "preLaunchTask": "Build OPEN LOOK, Xephyr",
+            "externalConsole": false,
+            "pipeTransport": {
+                "pipeProgram": "python3",
+                "pipeArgs": [
+                    "${workspaceFolder}/scripts/debug/linux.py",
+                    "linux-openlook"
+                ],
+                "debuggerPath": "/usr/bin/gdb",
+                "pipeCwd": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Window Maker, Xephyr",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/platforms/linux-wmaker/debug/bin/blaise",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "preLaunchTask": "Build Window Maker, Xephyr",
+            "externalConsole": false,
+            "pipeTransport": {
+                "pipeProgram": "python3",
+                "pipeArgs": [
+                    "${workspaceFolder}/scripts/debug/linux.py",
+                    "linux-wmaker"
+                ],
+                "debuggerPath": "/usr/bin/gdb",
+                "pipeCwd": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "GEM, Rasta",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/platforms/linux-gemix-gemd/debug/bin/blaise",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "preLaunchTask": "Build GEM, Rasta",
+            "externalConsole": false,
+            "pipeTransport": {
+                "pipeProgram": "python3",
+                "pipeArgs": [
+                    "${workspaceFolder}/scripts/debug/linux.py",
+                    "linux-gemix-gemd"
+                ],
+                "debuggerPath": "/usr/bin/gdb",
+                "pipeCwd": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Haiku, VM",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/boot/home/Projects/blaise/blaise",
+            "args": [],
+            "cwd": "/boot/home/Projects/blaise",
+            "MIMode": "gdb",
+            "preLaunchTask": "Deploy Haiku, VM",
+            "externalConsole": false,
+            "pipeTransport": {
+                "pipeProgram": "python3",
+                "pipeArgs": [
+                    "${workspaceFolder}/scripts/debug/remote.py",
+                    "debug-haiku"
+                ],
+                "debuggerPath": "/boot/system/bin/gdb"
+            }
+        }
+    ]
+}
