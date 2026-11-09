@@ -76,8 +76,6 @@ $(CONTAINER_GOALS): sdk-image native-src
 sdk-image:
 	$(if $(filter $(SDK_DEFAULT),$(DOCKER_IMAGE)),@docker image inspect $(DOCKER_IMAGE) >/dev/null 2>&1 \
 	    || docker build -t $(DOCKER_IMAGE) "$(SDK_CONTEXT)")
-native-src:
-	$(if $(filter $(NATIVE_DEFAULT),$(NATIVE_ROOT)),@sh scripts/build/fetch_native.sh >/dev/null)
 else
 all: app
 libs: $(LIB_NAMES)
@@ -115,6 +113,9 @@ claws-build: libs
 endif
 
 # Host-side goals.
+# Fetch Native's pinned commit unless NATIVE_ROOT names another checkout.
+native-src:
+	$(if $(filter $(NATIVE_DEFAULT),$(NATIVE_ROOT)),@sh scripts/build/fetch_native.sh >/dev/null)
 # The live and Claws tests start servers with Docker on the host; the test
 # programs themselves run in the SDK image (see scripts/test/*.sh).
 live-test: live-build
@@ -127,16 +128,16 @@ update-native:
 # Kept for old scripts: make test already runs ASan and UBSan in Docker.
 docker-test: test
 # The SDL2 image draws on the host desktop through its X11 socket.
-run: all
+run: all native-src
 	python3 -B scripts/debug/linux.py linux-sdl2 $(TARGET)
 # Build and test one backend in its SDK; PLATFORM=all runs every one.
 PLATFORM ?= all
-platform-test:
+platform-test: native-src
 	python3 -B scripts/build/platforms.py $(PLATFORM)
-list-platforms:
+list-platforms: native-src
 	python3 -B scripts/build/platforms.py --list
 # The release zip for one backend, as CI makes it: dist/blaise-VERSION-PLATFORM.zip.
-dist:
+dist: native-src
 	python3 -B scripts/build/package.py $(if $(filter all,$(PLATFORM)),linux-sdl2,$(PLATFORM)) --version $(VERSION)
 clean:
 	rm -rf -- "$(ROOT)/build" "$(BIN)"

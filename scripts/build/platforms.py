@@ -12,9 +12,21 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-NATIVE = Path(os.environ.get('NATIVE_ROOT') or subprocess.run(
-    ['sh', str(ROOT / 'scripts/build/fetch_native.sh')], check=True,
-    capture_output=True, text=True).stdout.strip()).resolve()
+
+
+def _native_root():
+    """Return Native's checkout, fetching the pinned one unless NATIVE_ROOT
+    names another. The Makefile exports NATIVE_ROOT even when it is the
+    default clone, which may not have been fetched yet."""
+    named = os.environ.get('NATIVE_ROOT')
+    if named and Path(named).resolve() != ROOT / 'build/deps/native':
+        return Path(named).resolve()
+    return Path(subprocess.run(
+        ['sh', str(ROOT / 'scripts/build/fetch_native.sh')], check=True,
+        capture_output=True, text=True).stdout.strip()).resolve()
+
+
+NATIVE = _native_root()
 PLATFORMS = json.loads((ROOT / 'scripts/build/platforms.json').read_text())
 TIMEOUT = 1800
 BUILD_TYPES = {'release': 'Release', 'debug': 'Debug'}
