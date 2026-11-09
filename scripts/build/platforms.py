@@ -5,16 +5,35 @@ usage: platforms.py [all|BACKEND] [--mode release|debug] [--build-only]
        platforms.py --list
 """
 from pathlib import Path
+import hashlib
 import json
 import os
 import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-NATIVE = Path(os.environ.get('NATIVE_ROOT', ROOT.parent / 'native')).resolve()
+NATIVE = Path(os.environ.get('NATIVE_ROOT') or subprocess.run(
+    ['sh', str(ROOT / 'scripts/build/fetch_native.sh')], check=True,
+    capture_output=True, text=True).stdout.strip()).resolve()
 PLATFORMS = json.loads((ROOT / 'scripts/build/platforms.json').read_text())
 TIMEOUT = 1800
 BUILD_TYPES = {'release': 'Release', 'debug': 'Debug'}
+
+
+def _resolve_images():
+    """Tag images built from this repository with a hash of their Dockerfile.
+
+    The Makefile computes the same tag, so `make` and these scripts share one
+    image, and editing the Dockerfile builds a new one.
+    """
+    for spec in PLATFORMS.values():
+        if '{root}' in spec.get('dockerfile', '') and ':' not in spec['image']:
+            context = Path(spec['dockerfile'].format(root=ROOT, native=NATIVE))
+            digest = hashlib.sha256((context / 'Dockerfile').read_bytes())
+            spec['image'] += ':' + digest.hexdigest()[:12]
+
+
+_resolve_images()
 
 
 def build_dir(name, mode):
@@ -22,9 +41,24 @@ def build_dir(name, mode):
     return ROOT / 'build/platforms' / name / mode
 
 
+def ensure_image(spec):
+    """Build an SDK image that is not on Docker Hub from its Dockerfile."""
+    if 'dockerfile' not in spec:
+        return True
+    image = spec['image']
+    if subprocess.run(['docker', 'image', 'inspect', image],
+                      capture_output=True).returncode == 0:
+        return True
+    context = spec['dockerfile'].format(root=ROOT, native=NATIVE)
+    return subprocess.run(['docker', 'build', '-t', image, context]
+                          ).returncode == 0
+
+
 def run_one(name, mode, build_only, resources_only=False):
     """Return 'passed', or the failing stage."""
     spec = PLATFORMS[name]
+    if not ensure_image(spec):
+        return 'image build failed'
     build = build_dir(name, mode)
     resource_args = []
     if any('CMAKE_TOOLCHAIN_FILE' in part for part in spec['cmake']):
@@ -33,6 +67,8 @@ def run_one(name, mode, build_only, resources_only=False):
             return f'host resources: {outcome}'
         resource_cpp = build_dir('linux-sdl2', 'release') / 'resources/blaise.cpp'
         resource_args = [f'-DBLAISE_RESOURCE_CPP={resource_cpp}']
+    if os.environ.get('BLAISE_VERSION'):
+        resource_args.append(f'-DBLAISE_VERSION={os.environ["BLAISE_VERSION"]}')
     docker = ['docker', 'run', '--rm', '--init', '-u',
               f'{os.getuid()}:{os.getgid()}', '-e', 'HOME=/tmp',
               '-e', 'ASAN_OPTIONS=detect_leaks=0', '-v', f'{ROOT}:{ROOT}',
@@ -43,7 +79,8 @@ def run_one(name, mode, build_only, resources_only=False):
                       f'-DCMAKE_BUILD_TYPE={BUILD_TYPES[mode]}',
                       *resource_args,
                       *[part.format(native=NATIVE) for part in spec['cmake']]],
-        'build': ['cmake', '--build', str(build), '-j8', '--target',
+        'build': ['cmake', '--build', str(build), f'-j{os.cpu_count() or 8}',
+                  '--target',
                   *(['blaise_resources'] if resources_only else
                     ['blaise', 'test_desktop'])],
     }

@@ -4,10 +4,12 @@ TLS is the one thing below the UI that Blaise does not write. Everything else in
 `lib/` uses the C++ standard library and POSIX. A TLS stack written for this
 project would be a liability: mail credentials go through it.
 
-Blaise links OpenSSL when it finds it at build time, as `make TLS=openssl` and
-CMake's `find_package(OpenSSL)` do by default. `make TLS=none` builds without it.
-None of the platform SDK images has OpenSSL today, so only the local `make` build
-has TLS; see [PLATFORM-STATUS.md](PLATFORM-STATUS.md).
+Blaise links OpenSSL when it finds it at build time, as `make` (`TLS=openssl`)
+and CMake's `find_package(OpenSSL)` do by default. `make TLS=none` builds without
+it. The `make` image and the Linux SDL2 platform image both come from
+`scripts/build/docker/linux-sdl`, which adds `libssl-dev`, so `make` and the
+`linux-sdl2` release zip have TLS. The other platform SDK images have no OpenSSL;
+see [PLATFORM-STATUS.md](PLATFORM-STATUS.md).
 
 | Claws Mail | Blaise |
 | --- | --- |

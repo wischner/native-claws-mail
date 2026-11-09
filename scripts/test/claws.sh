@@ -17,7 +17,15 @@ run_claws() {
         ubuntu:24.04 bash /session.sh "$1"
 }
 run_claws seed
-"$writer" "$work/home/Mail"
+# BLAISE_SDK_IMAGE runs the writer in the image that built it.
+if test -n "${BLAISE_SDK_IMAGE:-}"; then
+    root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+    docker run --rm --init -u "$(id -u):$(id -g)" -e HOME=/tmp \
+        -v "$root:$root" -v "$work:$work" -w "$root" "$BLAISE_SDK_IMAGE" \
+        "$writer" "$work/home/Mail"
+else
+    "$writer" "$work/home/Mail"
+fi
 report=$(run_claws check)
 echo "$report"
 echo "$report" | grep -q '^ *1 *3 *4 *#mh/Mailbox/inbox$' || {

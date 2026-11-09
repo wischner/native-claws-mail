@@ -10,7 +10,7 @@ keep its copyright line.
 ## Native
 
 The Native UI library, MIT License, Copyright (C) 2026 Tomaz Stih, is built from
-the sibling checkout and linked statically.
+https://github.com/wischner/native and linked statically.
 
 ## Writer and Isaac
 
@@ -21,5 +21,6 @@ GPL-2.0-or-later, used here under version 3 as that licence permits.
 
 ## OpenSSL
 
-When present at build time, Blaise links OpenSSL for TLS, Apache License 2.0,
+When present at build time, Blaise links OpenSSL for TLS (the `make` build and
+the Linux SDL2 release always have it), Apache License 2.0,
 which is compatible with GPL version 3. See [TLS](docs/notes/TLS.md).

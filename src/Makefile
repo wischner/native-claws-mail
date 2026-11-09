@@ -12,7 +12,7 @@ all: $(TARGET)
 headless: $(HEADLESS_TARGET)
 $(TARGET): $(OBJDIR)/main.o $(APP_OBJ) $(UI_OBJ) $(RESOURCE_OBJ) $(LINK_LIBS) $(NATIVE_ARCHIVE)
 	@mkdir -p $(dir $@)
-	$(CXX) $^ $(LDFLAGS) $(NATIVE_LDLIBS) $(TLS_LDLIBS) -Wl,-rpath,'$$ORIGIN/../build/sdk/usr/lib/x86_64-linux-gnu' -o $@
+	$(CXX) $^ $(LDFLAGS) $(NATIVE_LDLIBS) $(TLS_LDLIBS) -o $@
 $(HEADLESS_TARGET): $(OBJDIR)/main_headless.o $(APP_OBJ) $(LINK_LIBS)
 	@mkdir -p $(dir $@)
 	$(CXX) $^ $(LDFLAGS) $(TLS_LDLIBS) -o $@

@@ -2,7 +2,8 @@
 
 Blaise is a mail client rebuilt from the ground up from
 [Claws Mail](https://www.claws-mail.org), in modern C++20, on the Native UI library.
-It is the sibling of [Writer](../native-abiword) and [Isaac](../native-gnumeric),
+It is the sibling of [Writer](https://github.com/wischner/native-abiword) and
+[Isaac](https://github.com/wischner/native-gnumeric),
 with the same menus, toolbars and status bar.
 
 It reads and writes Claws' MH folders, caches, account, filter and address book
@@ -20,24 +21,48 @@ about.
 ## Build and run
 
 ```sh
-make -j8                     # bin/blaise: desktop
-bin/blaise
+git clone https://github.com/wischner/native-claws-mail.git
+cd native-claws-mail
+make                         # bin/blaise: desktop
+make run                     # build, then open it on your desktop
+make headless                # bin/blaise-headless: no display dependency
+make debug                   # bin/blaise-debug with ASan and UBSan
+make dist                    # dist/blaise-0.1.0-linux-sdl2.zip, as a release ships it
+make clean                   # remove build/ and bin/
+```
+
+The host needs only Linux, Git, GNU make and Docker. `make run`, `make dist` and
+the platform and live tests also use Python 3; `make dist` also needs `patchelf`
+and `zip`. Every build goal runs inside one SDK image, so the host needs no
+compiler, headers or `../native` checkout:
+
+- **Image.** `scripts/build/docker/linux-sdl/Dockerfile` adds OpenSSL to
+  `wischner/gcc-x86_64-linux-sdl:1.3.0` (GCC 11, CMake, SDL2). The first `make`
+  builds it as `blaise-linux-sdl:<hash of the Dockerfile>`, so editing the
+  Dockerfile builds a new image. `DOCKER_IMAGE=...` uses another image.
+- **Native.** [Native](https://github.com/wischner/native) is fetched into
+  `build/deps/native` at the commit pinned in `scripts/build/fetch_native.sh`.
+  `NATIVE_REF=<commit, tag or branch> make` builds another revision;
+  `NATIVE_ROOT=/path/to/native make` builds against your own checkout.
+- **Output.** Objects go to `build/sdl2/<mode>/`, binaries to `bin/`, release
+  zips to `dist/`.
+
+TLS is on: the image has OpenSSL. `make TLS=none` builds without it, and
+connections that ask for TLS then fail with a message. See [TLS](docs/notes/TLS.md).
+`make run` and the `SDL2, Local` F5 profile run the binary in the same image,
+drawing on your desktop through its X11 socket.
+
+```sh
 bin/blaise --select '#mh/Mailbox/inbox:1'   # open at a folder or message
-make headless -j8            # bin/blaise-headless: no display dependency
 bin/blaise-headless --list
 bin/blaise-headless --summary '#mh/Mailbox/inbox'
 bin/blaise-headless --message '#mh/Mailbox/inbox:1'
 bin/blaise-headless --receive
-make debug -j8               # bin/blaise-debug with sanitizers
-make clean                   # remove build/ and bin/
 ```
 
-Dependencies: Linux, GCC with C++20, GNU make 4.3+, `flock`, CMake 3.20 and Python 3.
-OpenSSL's headers enable TLS; `make TLS=none` builds without, and connections that
-ask for TLS then fail with a message. See [TLS](docs/notes/TLS.md). Native comes
-from the sibling `../native` checkout; override with `NATIVE_ROOT=/path/to/native`.
-On Ubuntu without development headers the build fetches them into `build/sdk/` and
-installs nothing.
+The binaries link the image's Ubuntu 22.04 libraries. To run them outside Docker,
+the host needs the same libraries (SDL2, SDL2_ttf, OpenSSL 3); the zip from
+`make dist` lists them.
 
 Mail lives in `~/Mail` and settings in `~/.blaise`; `--mail` and `--config` move
 them.
@@ -86,17 +111,28 @@ subject matchcase "[list]" move "#mh/Mailbox/lists" mark_as_read
 ## Tests
 
 ```sh
-make test                    # unit tests, no display
+make test                    # unit tests under ASan and UBSan, no display
 make ui-test                 # the real window, through Native's input hooks
-make docker-test             # unit tests under ASan and UBSan
 make live-test               # real Dovecot and Mailpit, in Docker
 make claws-test              # real Claws Mail, in Docker, both ways
 make platform-test           # every backend SDK; PLATFORM=linux-x11 for one
 make list-platforms
 ```
 
-See [testing](docs/notes/TESTING.md). ASan cannot start on hosts that preload a
-security agent; see [that note](docs/notes/HOST-ASAN.md).
+See [testing](docs/notes/TESTING.md). Tests run in Docker, so ASan works even
+on hosts that preload a security agent; see [that note](docs/notes/HOST-ASAN.md).
+
+## Releases
+
+Pushing a `vX.Y.Z` tag runs `make` and `make test`, builds every backend and
+publishes one zip per platform on the GitHub release page:
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+See [releasing](docs/notes/RELEASING.md).
 
 ## Documentation
 
@@ -104,6 +140,7 @@ security agent; see [that note](docs/notes/HOST-ASAN.md).
 - [Port status](docs/notes/PORT-STATUS.md): what has moved from Claws Mail, module
   by module
 - [Native changes](docs/notes/NATIVE-CHANGES.md): what this project added to Native
+- [Releasing](docs/notes/RELEASING.md): the tag-triggered build and its zips
 - [TLS](docs/notes/TLS.md) and [licensing](docs/notes/LICENSING.md)
 - [Coding standards](docs/standards/)
 

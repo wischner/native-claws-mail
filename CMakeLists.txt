@@ -1,5 +1,5 @@
-# Blaise on any Native backend. `make` remains the
-# local entry point; this file is what the platform SDKs build.
+# Blaise on any Native backend. `make` remains the local entry point; this
+# file is what the platform SDKs build.
 cmake_minimum_required(VERSION 3.20)
 project(blaise LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
@@ -8,7 +8,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(BLAISE_VERSION "0.1.0" CACHE STRING "Application version")
 if(NOT NATIVE_ROOT)
-    get_filename_component(NATIVE_ROOT "${CMAKE_SOURCE_DIR}/../native" ABSOLUTE)
+    # Same GitHub clone the Makefile uses; -DNATIVE_ROOT=/path uses a checkout.
+    execute_process(COMMAND sh "${CMAKE_SOURCE_DIR}/scripts/build/fetch_native.sh"
+        OUTPUT_VARIABLE NATIVE_ROOT OUTPUT_STRIP_TRAILING_WHITESPACE
+        COMMAND_ERROR_IS_FATAL ANY)
 endif()
 set(BUILD_TESTING OFF CACHE BOOL "Native standalone tests" FORCE)
 add_subdirectory(src/ui native-dependency)

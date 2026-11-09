@@ -28,7 +28,7 @@ share any misreading of them. That is what the live test is for.
 
 ## The live test
 
-`make live-test` needs Docker. `scripts/test/live.sh` starts Dovecot and Mailpit,
+`make live-test` needs Docker and network access. `scripts/test/live.sh` starts Dovecot and Mailpit,
 seeds a mailbox over IMAP, runs `test_live` and then checks what Mailpit received.
 
 It covers implicit TLS and STARTTLS, certificate rejection of Dovecot's self-signed
@@ -74,5 +74,13 @@ land in `build/platforms/<name>/<mode>/`. See [PLATFORM-STATUS.md](PLATFORM-STAT
 
 ## Sanitizers
 
-`make test` runs UBSan on hosts with `/etc/ld.so.preload`, as
-[HOST-ASAN.md](HOST-ASAN.md) explains. `make docker-test` runs ASan and UBSan.
+`make test` builds and runs the unit suites under ASan and UBSan in the SDK image,
+so a security agent preloaded on the host cannot stop them; see
+[HOST-ASAN.md](HOST-ASAN.md). `make docker-test` is an alias.
+
+## Where things run
+
+Every `make` goal compiles in the SDK image. `make live-test` and
+`make claws-test` start Dovecot, Mailpit and Claws Mail with Docker on the host,
+then run the seed scripts and the test programs in the SDK image too, on the host
+network, so the host needs no Python packages or OpenSSL runtime.

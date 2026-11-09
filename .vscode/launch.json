@@ -9,10 +9,17 @@
             "args": [],
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
-            "miDebuggerPath": "/usr/bin/gdb",
-            "environment": [],
             "preLaunchTask": "Build SDL2, Local",
-            "externalConsole": false
+            "externalConsole": false,
+            "pipeTransport": {
+                "pipeProgram": "python3",
+                "pipeArgs": [
+                    "${workspaceFolder}/scripts/debug/linux.py",
+                    "linux-sdl2"
+                ],
+                "debuggerPath": "/usr/bin/gdb",
+                "pipeCwd": "${workspaceFolder}"
+            }
         },
         {
             "name": "X11, Xephyr",

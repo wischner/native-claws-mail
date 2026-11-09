@@ -6,6 +6,16 @@ binary=$1
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 dovecot=blaise-live-dovecot
 mailpit=blaise-live-mailpit
+# BLAISE_SDK_IMAGE runs the seed, the test and the check in the image that
+# built the test, on the host network so 127.0.0.1 reaches the servers.
+sdk() {
+    if test -n "${BLAISE_SDK_IMAGE:-}"; then
+        docker run --rm --init --network=host -u "$(id -u):$(id -g)" \
+            -e HOME=/tmp -v "$root:$root" -w "$root" "$BLAISE_SDK_IMAGE" "$@"
+    else
+        "$@"
+    fi
+}
 cleanup() { docker rm -f "$dovecot" "$mailpit" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 cleanup
@@ -15,6 +25,6 @@ docker run -d --name "$dovecot" -e USER_PASSWORD=blaise-test \
 docker run -d --name "$mailpit" -p 127.0.0.1:1025:1025 \
     -p 127.0.0.1:8025:8025 axllent/mailpit:latest >/dev/null
 sleep 4
-python3 -B "$root/scripts/test/live_seed.py"
-"$binary"
-python3 -B "$root/scripts/test/live_check.py"
+sdk python3 -B "$root/scripts/test/live_seed.py"
+sdk "$binary"
+sdk python3 -B "$root/scripts/test/live_check.py"

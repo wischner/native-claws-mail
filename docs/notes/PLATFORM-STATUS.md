@@ -25,9 +25,12 @@ in every run above came from the test.
 
 ## Known limits
 
-- **TLS exists only in the local `make` build.** None of the SDK images above has
-  OpenSSL, so every platform build in this table has no TLS and refuses accounts
-  that ask for it. Secure mail on those backends needs OpenSSL added to the image.
+- **TLS exists only in the `make` build and on SDL2.** Both use
+  `scripts/build/docker/linux-sdl`, which adds OpenSSL. The other SDK images
+  have none, so those builds have no TLS and refuse accounts that ask for it.
+  Secure mail on those backends needs OpenSSL added to their image the same way.
 - **Windows:** the socket code compiles against Winsock but has never run.
-- **macOS:** `gmtime_r`, POSIX sockets and `iconv` should all be there, but it needs
-  the remote Mac build and has not been tried.
+- **macOS:** `gmtime_r`, POSIX sockets and `iconv` should all be there, but
+  `lib/net/socket_transport.cpp` sends with `MSG_NOSIGNAL`, which macOS lacks
+  (it uses `SO_NOSIGPIPE`). It has not been tried, so the release workflow has no
+  macOS job yet.

@@ -1,6 +1,6 @@
 {
     "linux-sdl2": {
-        "image": "wischner/gcc-x86_64-linux-sdl:latest",
+        "image": "blaise-linux-sdl",
         "cmake": [
             "-DTOOLKIT=SDL2"
         ],
@@ -8,10 +8,23 @@
             "env",
             "SDL_VIDEODRIVER=dummy",
             "SDL_RENDER_DRIVER=software"
-        ]
+        ],
+        "dockerfile": "{root}/scripts/build/docker/linux-sdl",
+        "package": {
+            "title": "Linux (SDL2)",
+            "requires": [
+                "64-bit x86 Linux with glibc 2.35 or newer.",
+                "An X11 or Wayland desktop."
+            ],
+            "run": [
+                "```sh",
+                "./blaise",
+                "```"
+            ]
+        }
     },
     "linux-x11": {
-        "image": "wischner/gcc-x86_64-linux-x11:latest",
+        "image": "wischner/gcc-x86_64-linux-x11:1.6.0",
         "cmake": [
             "-DTOOLKIT=X11"
         ],
@@ -19,10 +32,23 @@
             "xvfb-run",
             "-a"
         ],
-        "session": "x11"
+        "session": "x11",
+        "package": {
+            "title": "Linux (X11, Athena widgets)",
+            "requires": [
+                "64-bit x86 Linux with glibc 2.35 or newer.",
+                "An X11 session (Xorg or XWayland).",
+                "No TLS: this build refuses accounts that ask for it (see the project's docs/notes/TLS.md)."
+            ],
+            "run": [
+                "```sh",
+                "./blaise",
+                "```"
+            ]
+        }
     },
     "linux-motif": {
-        "image": "wischner/gcc-x86_64-linux-motif:latest",
+        "image": "wischner/gcc-x86_64-linux-motif:1.4.1",
         "cmake": [
             "-DTOOLKIT=MOTIF"
         ],
@@ -30,10 +56,23 @@
             "xvfb-run",
             "-a"
         ],
-        "session": "cde-xephyr"
+        "session": "cde-xephyr",
+        "package": {
+            "title": "Linux (Motif)",
+            "requires": [
+                "64-bit x86 Linux with glibc 2.35 or newer.",
+                "An X11 session (Xorg or XWayland).",
+                "No TLS: this build refuses accounts that ask for it (see the project's docs/notes/TLS.md)."
+            ],
+            "run": [
+                "```sh",
+                "./blaise",
+                "```"
+            ]
+        }
     },
     "linux-openlook": {
-        "image": "wischner/gcc-x86_64-linux-openlook:latest",
+        "image": "wischner/gcc-x86_64-linux-openlook:1.3.1",
         "cmake": [
             "-DTOOLKIT=OPENLOOK"
         ],
@@ -41,10 +80,24 @@
             "xvfb-run",
             "-a"
         ],
-        "session": "openlook-xephyr"
+        "session": "openlook-xephyr",
+        "package": {
+            "title": "Linux (OPEN LOOK, XView)",
+            "requires": [
+                "64-bit x86 Linux with glibc 2.35 or newer.",
+                "An X11 session (Xorg or XWayland).",
+                "The XView libraries are included in `lib/`.",
+                "No TLS: this build refuses accounts that ask for it (see the project's docs/notes/TLS.md)."
+            ],
+            "run": [
+                "```sh",
+                "./blaise",
+                "```"
+            ]
+        }
     },
     "linux-wmaker": {
-        "image": "wischner/gcc-x86_64-linux-window-maker:latest",
+        "image": "wischner/gcc-x86_64-linux-window-maker:1.4.1",
         "cmake": [
             "-DTOOLKIT=WMAKER"
         ],
@@ -52,10 +105,24 @@
             "xvfb-run",
             "-a"
         ],
-        "session": "window-maker-xephyr"
+        "session": "window-maker-xephyr",
+        "package": {
+            "title": "Linux (Window Maker, WINGs)",
+            "requires": [
+                "64-bit x86 Linux with glibc 2.35 or newer.",
+                "An X11 session (Xorg or XWayland).",
+                "The WINGs libraries are included in `lib/`.",
+                "No TLS: this build refuses accounts that ask for it (see the project's docs/notes/TLS.md)."
+            ],
+            "run": [
+                "```sh",
+                "./blaise",
+                "```"
+            ]
+        }
     },
     "linux-gemix-gemd": {
-        "image": "wischner/gcc-x86_64-gemix:latest",
+        "image": "wischner/gcc-x86_64-gemix:1.4.1",
         "cmake": [
             "-DTOOLKIT=GEMIX",
             "-DGEMIX_USE_GEMD=ON"
@@ -69,31 +136,101 @@
             "{native}/scripts/gemix/gemd-session.sh"
         ],
         "session": "gemix",
-        "gemd": true
+        "gemd": true,
+        "package": {
+            "title": "Linux (GEMix)",
+            "requires": [
+                "64-bit x86 Linux with glibc 2.35 or newer.",
+                "A running GEMix `gemd` server. Blaise is a GEM client and connects to the server named by `GEMD_SOCKET`; it does not start one.",
+                "No TLS: this build refuses accounts that ask for it (see the project's docs/notes/TLS.md)."
+            ],
+            "run": [
+                "Start Blaise from a GEMix session, or point it at the server:",
+                "",
+                "```sh",
+                "GEMD_SOCKET=/path/to/gemd.sock ./blaise",
+                "```"
+            ]
+        }
     },
     "haiku": {
         "image": "wischner/gcc-x86_64-haiku:1.1.0",
         "cmake": [
             "-DCMAKE_TOOLCHAIN_FILE={native}/scripts/cmake/toolchain-haiku.cmake"
-        ]
+        ],
+        "package": {
+            "title": "Haiku",
+            "requires": [
+                "64-bit (x86_64) Haiku.",
+                "No extra packages: Blaise uses only system libraries.",
+                "No TLS: this build refuses accounts that ask for it (see the project's docs/notes/TLS.md)."
+            ],
+            "run": [
+                "Unzip, then double-click `blaise` in Tracker, or from Terminal:",
+                "",
+                "```sh",
+                "./blaise",
+                "```"
+            ]
+        }
     },
     "linux-wayland": {
         "image": "native-wayland-sdk:24.04",
         "cmake": [
             "-DTOOLKIT=WAYLAND"
-        ]
+        ],
+        "dockerfile": "{native}/scripts/linux/wayland",
+        "package": {
+            "title": "Linux (GTK 4)",
+            "requires": [
+                "64-bit x86 Linux with glibc 2.39 or newer (Ubuntu 24.04 or later).",
+                "A Wayland or X11 desktop.",
+                "No TLS: this build refuses accounts that ask for it (see the project's docs/notes/TLS.md)."
+            ],
+            "run": [
+                "```sh",
+                "./blaise",
+                "```"
+            ]
+        }
     },
     "linux-elementary": {
         "image": "native-wayland-sdk:24.04",
         "cmake": [
             "-DTOOLKIT=ELEMENTARY"
-        ]
+        ],
+        "dockerfile": "{native}/scripts/linux/wayland",
+        "package": {
+            "title": "elementary OS",
+            "requires": [
+                "elementary OS 8, or 64-bit x86 Linux with glibc 2.39 or newer and Granite 7.",
+                "A Wayland or X11 desktop.",
+                "No TLS: this build refuses accounts that ask for it (see the project's docs/notes/TLS.md)."
+            ],
+            "run": [
+                "```sh",
+                "./blaise",
+                "```"
+            ]
+        }
     },
     "windows": {
         "image": "native-windows-winui-sdk:24.04",
         "cmake": [
             "-DCMAKE_TOOLCHAIN_FILE={native}/scripts/cmake/toolchain-mingw.cmake"
         ],
-        "suffix": ".exe"
+        "suffix": ".exe",
+        "dockerfile": "{native}/scripts/windows/winui",
+        "package": {
+            "title": "Windows",
+            "requires": [
+                "64-bit Windows 10 or 11.",
+                "[Windows App Runtime 1.8 (x64)](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads). Install it once; Blaise will not start without it.",
+                "No TLS: this build refuses accounts that ask for it (see the project's docs/notes/TLS.md)."
+            ],
+            "run": [
+                "Unzip the folder and run `blaise.exe`. Keep the DLLs beside it."
+            ]
+        }
     }
 }

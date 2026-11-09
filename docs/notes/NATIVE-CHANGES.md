@@ -1,7 +1,9 @@
 # Native changes made for Blaise
 
-These extend the sibling `../native`. A contract added to Native has to work on
-every backend, so nothing here is SDL2-only.
+These extend [Native](https://github.com/wischner/native) on its
+`fyodor-native-extensions` branch; `scripts/build/fetch_native.sh` pins the
+commit Blaise builds against. A contract added to Native has to work on every
+backend, so nothing here is SDL2-only.
 
 | Change | Why | Backends |
 | --- | --- | --- |
@@ -16,8 +18,8 @@ is taught in chapter 22 of Programming Native, its decision is recorded in
 `docs/notes/CUSTOM.md`, and `check_password_edit` in
 `native_ruler_toolbar_tests` covers it on every backend.
 
-The Native tree also holds Isaac's uncommitted `tab_strip` work. Both are in the
-working tree, not yet committed.
+Isaac's `tab_strip` is on the same branch. Both are committed and pushed, so the
+build fetches them from GitHub.
 
 ## Fixed along the way
 

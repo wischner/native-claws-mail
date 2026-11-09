@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """Run GDB/MI inside a backend's SDK and its matching desktop session."""
 from pathlib import Path
-import json
 import os
 import shlex
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-NATIVE = Path(os.environ.get('NATIVE_ROOT', ROOT.parent / 'native')).resolve()
-PLATFORMS = json.loads((ROOT / 'scripts/build/platforms.json').read_text())
+sys.path.insert(0, str(ROOT / 'scripts/build'))
+from platforms import NATIVE, PLATFORMS  # noqa: E402  (fetches Native)
 PREFIXES = {'cde-xephyr': 'CDE', 'openlook-xephyr': 'OPENLOOK',
             'window-maker-xephyr': 'WINDOW_MAKER'}
 

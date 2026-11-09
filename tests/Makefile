@@ -24,8 +24,7 @@ $(UI_TEST): $(UI_SOURCES) $(wildcard $(ROOT)/tests/ui/*.h) $(UI_OBJ) $(LINK_LIBS
 	@$(CXX) $(CXXFLAGS) -isystem $(NATIVE_ROOT)/include -I$(ROOT)/src/ui \
 	    -I$(ROOT)/tests/unit -DFIXTURES='"$(ROOT)/tests/fixtures"' -MMD -MP \
 	    $(UI_SOURCES) $(UI_OBJ) $(LINK_LIBS) $(NATIVE_ARCHIVE) $(LDFLAGS) \
-	    $(NATIVE_LDLIBS) $(TLS_LDLIBS) -Wl,-rpath,'$$ORIGIN/../../sdk/usr/lib/x86_64-linux-gnu' \
-	    -o $@
+	    $(NATIVE_LDLIBS) $(TLS_LDLIBS) -o $@
 	@echo "  TEST    $(notdir $@)"
 
 LIVE_TEST := $(OBJDIR)/test_live
@@ -36,9 +35,9 @@ $(LIVE_TEST): $(ROOT)/tests/live/test_live.cpp $(LINK_LIBS) $(APP_SOURCES)
 	    $(LINK_LIBS) $(LINK_LIBS) $(LDFLAGS) $(TLS_LDLIBS) -o $@
 	@echo "  TEST    $(notdir $@)"
 
-.PHONY: live
-live: $(LIVE_TEST)
-	bash $(ROOT)/scripts/test/live.sh $(LIVE_TEST)
+# Run by the top-level live-test, which starts the servers on the host.
+.PHONY: live-build
+live-build: $(LIVE_TEST)
 
 CLAWS_WRITER := $(OBJDIR)/write_claws_folder
 
@@ -47,9 +46,9 @@ $(CLAWS_WRITER): $(ROOT)/tests/live/write_claws_folder.cpp $(LINK_LIBS)
 	@$(CXX) $(CXXFLAGS) -MMD -MP $< $(LINK_LIBS) $(LINK_LIBS) $(LDFLAGS) \
 	    $(TLS_LDLIBS) -o $@
 
-.PHONY: claws
-claws: $(CLAWS_WRITER)
-	bash $(ROOT)/scripts/test/claws.sh $(CLAWS_WRITER)
+# Run by the top-level claws-test, which starts Claws Mail on the host.
+.PHONY: claws-build
+claws-build: $(CLAWS_WRITER)
 
 .PHONY: ui-build
 ui-build: $(UI_TEST)

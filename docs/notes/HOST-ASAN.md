@@ -17,17 +17,16 @@ is not ready yet. Without `-static-libasan` the same run stops earlier with
 "ASan runtime does not come first".
 
 The agent is the machine's security control, so the project does not disable or
-bypass it. Instead:
-
-- The Makefile drops ASan when `/etc/ld.so.preload` exists, so `make test` runs
-  UBSan only. Override with `SANITIZERS=`.
-- `make docker-test` runs the full ASan and UBSan suite in
-  `wischner/gcc-x86_64-linux-sdl`, which has no preload.
+bypass it. Instead, every `make` build, test and run happens in the SDK image
+(`scripts/build/docker/linux-sdl`, based on `wischner/gcc-x86_64-linux-sdl`),
+which has no preload, so ASan and UBSan are always on. `make docker-test`
+remains as an alias of `make test`.
 
 Native's Debug build adds ASan on its own, so the Makefile passes
-`NATIVE_ENABLE_DEVELOPER_CHECKS=OFF` whenever ASan is off. Otherwise the final
-link fails with undefined `__asan_*` references in `libnative.a`.
+`NATIVE_ENABLE_DEVELOPER_CHECKS=OFF` whenever `SANITIZERS=` leaves ASan out.
+Otherwise the final link fails with undefined `__asan_*` references in
+`libnative.a`.
 
 Debug objects record their sanitizer flags only in their contents. Run
-`rm -rf build/debug` after changing `SANITIZERS`, or linking fails with
+`rm -rf build/sdl2/debug` after changing `SANITIZERS`, or linking fails with
 undefined `__asan_*` symbols.
