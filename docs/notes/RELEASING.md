@@ -19,11 +19,17 @@ A tag release attaches every zip and a `SHA256SUMS` file.
 
 Nothing comes from a developer machine. The workflow checks out the repository,
 fetches [Native](https://github.com/wischner/native) at the commit pinned in
-[`fetch_native.sh`](../../scripts/build/fetch_native.sh), pulls the SDK images
-at the versions named in `platforms.json`, and builds the rest from Dockerfiles:
+[`fetch_native.sh`](../../scripts/build/fetch_native.sh), applies the checked-in
+patches under `scripts/build/patches/`, pulls the SDK images at the tags named
+in `platforms.json`, and builds the rest from Dockerfiles:
 `blaise-linux-sdl` from
 [`scripts/build/docker/linux-sdl`](../../scripts/build/docker/linux-sdl), and the
 Wayland and Windows SDKs from Native's own Dockerfiles.
+
+The GEM backend uses `wischner/gcc-x86_64-gemix:latest`, a mutable tag. Record
+the resolved image digest when reproducing a build. Local runtime overrides
+through `GEM_RUNTIME_ROOT` or ignored `build/gem-runtime.path` select a server
+for tests and debugging; they do not bundle that server into the client zip.
 
 To build against a newer Native, change the commit in `fetch_native.sh`, run
 `make test` and `make platform-test`, and commit the change.
@@ -78,3 +84,9 @@ Only `linux-sdl2` has TLS; the README of every other zip says so. There is no
 macOS zip yet; see [PLATFORM-STATUS.md](PLATFORM-STATUS.md).
 
 The GEMix zip is a `gemd` client and needs a GEMix server already running.
+
+The F5 mailbox is development-only. Packaging does not copy
+`scripts/test/demo_mail.py`, `.vscode/`, `build/uat-mail/`, account credentials
+or synthetic messages, and release builds do not start the server or create its
+account. A distributed client starts with its normal configuration and mail
+paths; test account setup is confined to the GEM F5 launcher.

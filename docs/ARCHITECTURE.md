@@ -54,13 +54,29 @@ Native's own rules. See [notes/NATIVE-CHANGES.md](notes/NATIVE-CHANGES.md).
 
 ### One suite with Writer and Isaac
 
-Blaise's shell is theirs: the same 1000×760 window, File, Edit and View first and
-Help last with the same shortcuts where they mean the same thing, the same
-30-pixel strips of tools and hosted controls, and the same four-part status bar
-with the same 130, 150 and 70 pixel widths. Message and Tools are the added menus,
-as Insert and Data are for the others. The nine icons they share are
-byte-identical, and the twelve mail tools are drawn in the same hand by the same
-exporter. Claws' own toolbar and layout options are not ported.
+Blaise shares the suite's 1000×760 initial window, File, Edit and View first,
+Help last, common command shortcuts and four-part status bar with fixed parts
+of 130, 150 and 70 pixels. Message and Tools are the mail-specific menus.
+Claws' toolbar customization and layout options are not ported.
+
+Native's theme supplies toolbar and status heights. GEM follows Gemscape and
+Ted: the verified SDK uses 20-pixel toolbar rows, 16×16 icons and 18-pixel
+embedded fields. Other backends use their own metrics. Toolbar group separators
+take the measured width of an icon button; GEM draws the rule at the slot's
+trailing edge so the visible empty cell has that same width.
+
+Common commands ask Native's standard icon catalog first. On GEM this reuses
+Ted's artwork where available. Unsupported commands use the existing embedded
+suite or mail-specific icons; shared GEM assets are not copied into Blaise.
+
+Folder and message views adapt Native's tree and virtual table controls. Native
+splitters own pane resizing. Unread subject and sender cells use the standard
+table painter with the same one-pixel bold overstrike as message field labels,
+preserving the system font and its metrics. Pane and toolbar field border masks
+remove doubled edges while retaining native focus, selection and input handling.
+The status bar stops before GEM's resize corner. See
+[Native integration](notes/NATIVE-CHANGES.md) for dependency patches and the
+separate GEM runtime fix.
 
 ### Claws' files, not a new format
 

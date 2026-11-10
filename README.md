@@ -42,8 +42,9 @@ compiler, headers or `../native` checkout:
   Dockerfile builds a new image. `DOCKER_IMAGE=...` uses another image.
 - **Native.** [Native](https://github.com/wischner/native) is fetched into
   `build/deps/native` at the commit pinned in `scripts/build/fetch_native.sh`.
-  The fetch script also applies the shared toolbar-control and pane-chrome patches in
-  `scripts/build/patches/`, pending its inclusion in the next Native pin.
+  The fetch script also applies the shared toolbar-control, separator and
+  pane-chrome patches in `scripts/build/patches/`, pending their inclusion in
+  the next Native pin. See [Native integration](docs/notes/NATIVE-CHANGES.md).
   `NATIVE_REF=<commit, tag or branch> make` builds another revision;
   `NATIVE_ROOT=/path/to/native make` builds against your own checkout.
 - **Output.** Objects go to `build/sdl2/<mode>/`, binaries to `bin/`, release
@@ -100,6 +101,8 @@ This F5-only account and its mail persist under ignored `build/uat-mail/`,
 separate from your normal account. Delete that directory while debugging is
 stopped to reset the samples. Normal builds and distribution packages neither
 start nor include the test server, account setup or sample mail.
+See [F5 mailbox testing](docs/notes/TESTING.md#f5-test-mailbox) for the test
+workflow, captured messages and debugger troubleshooting.
 
 All application UI goes through Native's public API. The default build selects
 Native's SDL2 backend; `make platform-test` builds the others. See
@@ -129,6 +132,10 @@ python3 scripts/build/platforms.py linux-gemix-gemd
 The box above the list searches sender and subject as you type. It also takes
 Claws' quick search: `f alice & s report` for from and subject, `U` for unread,
 `~T` for not marked, `b text` for the body.
+
+Unread subjects and senders use the system font in bold. Toolbar dimensions
+come from Native's theme, and each group separator occupies one full button
+width. The folder tree, message table and pane splitters use Native controls.
 
 Click an attachment line to save it. Click a link to copy it. Double-click a draft
 or queued message to edit it. Filter rules are written in Claws' own syntax, under
