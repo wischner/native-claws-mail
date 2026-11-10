@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
 project(blaise_native_dependency LANGUAGES CXX)
+if(NOT EXISTS "${NATIVE_ROOT}/include/native/standard_icon.h")
+    message(FATAL_ERROR
+        "Blaise requires Native's shared toolbar metrics and standard icons. "
+        "Use the pinned dependency (unset NATIVE_ROOT and NATIVE_REF), "
+        "or update your custom Native checkout.")
+endif()
 # Native permits consumers to choose their own root build directory.
 add_subdirectory("${NATIVE_ROOT}" native)
 if(NOT TARGET native_rc)

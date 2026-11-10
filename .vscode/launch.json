@@ -106,7 +106,21 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/platforms/linux-gemix-gemd/debug/bin/blaise",
-            "args": [],
+            "setupCommands": [
+                {
+                    "description": "Pass mailbox identifiers beginning with # literally",
+                    "text": "set startup-with-shell off",
+                    "ignoreFailures": false
+                }
+            ],
+            "args": [
+                "--config",
+                "${workspaceFolder}/build/uat-mail/config",
+                "--mail",
+                "${workspaceFolder}/build/uat-mail/Mail",
+                "--select",
+                "#mh/Mailbox/inbox"
+            ],
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
             "preLaunchTask": "Build GEM, Rasta",
@@ -115,7 +129,8 @@
                 "pipeProgram": "python3",
                 "pipeArgs": [
                     "${workspaceFolder}/scripts/debug/linux.py",
-                    "linux-gemix-gemd"
+                    "linux-gemix-gemd",
+                    "--demo-mail"
                 ],
                 "debuggerPath": "/usr/bin/gdb",
                 "pipeCwd": "${workspaceFolder}"

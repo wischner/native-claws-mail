@@ -9,6 +9,7 @@
 // Copyright (C) 2026 tomaz stih
 //
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
@@ -167,6 +168,27 @@ private:
             // The suite's shell: two strips, four-part status, same size.
             CHECK(window_.toolbar_.get_items().size() > 10);
             CHECK(window_.search_bar_.get_items().size() == 4);
+            check_toolbar_layout();
+            const auto original = window_.get_bounds();
+            window_.set_bounds(native::rect(original.x1(), original.y1(),
+                                            740, 560));
+            check_toolbar_layout();
+            window_.set_bounds(original);
+            check_toolbar_layout();
+            // GEM returns Ted's shared artwork; other backends retain
+            // the embedded resource fallback.
+            using stock = native::standard_icon_id;
+            for (const auto &[name, id] :
+                 std::initializer_list<std::pair<const char *, stock>>{
+                     {"fileNew", stock::file_new}, {"fileOpen", stock::file_open},
+                     {"fileSave", stock::file_save}, {"undo", stock::undo},
+                     {"cut", stock::cut}, {"copy", stock::copy},
+                     {"paste", stock::paste}}) {
+                const auto icon = ui::tool_icon(name);
+                CHECK(icon && icon->w() == 16 && icon->h() == 16);
+                if (const auto shared = native::standard_icon(id))
+                    CHECK(icon == shared);
+            }
             CHECK(window_.status_.get_parts().size() == 4);
             CHECK(window_.status_.get_parts()[0].width == 130);
             CHECK(window_.status_.get_parts()[1].width == 150);
@@ -182,6 +204,91 @@ private:
         wait("tree", [this] {
             return window_.folders_.find_node("#mh/Mailbox/inbox") != nullptr;
         });
+        act("tree keyboard expansion", [this] {
+            auto &tree = window_.folders_;
+            const auto root = tree.get_items().front().id;
+            tree.set_selected_item(root);
+            tree.on_native_navigation(native::tree_view_navigation::left);
+            CHECK(!tree.get_expanded(root));
+            tree.on_native_navigation(native::tree_view_navigation::right);
+            CHECK(tree.get_expanded(root));
+            tree.on_native_navigation(native::tree_view_navigation::down);
+            CHECK(tree.selected_id() == "#mh/Mailbox/inbox");
+        });
+    }
+
+    void check_toolbar_layout() {
+        const auto client = window_.get_client_bounds();
+        const auto footer = window_.status_.get_bounds();
+        CHECK(window_.folders_.get_border_sides() == native::border_sides::right);
+        CHECK(window_.summary_.get_border_sides() ==
+              (native::border_sides::left | native::border_sides::bottom));
+        CHECK(window_.message_pane_.get_border_sides() ==
+              (native::border_sides::left | native::border_sides::top));
+        CHECK(footer.y2() == window_.get_bounds().h());
+        CHECK(client.y2() == footer.y1());
+        const auto panes = window_.split_.get_bounds();
+        CHECK(panes.x1() == client.x1() && panes.y1() == client.y1());
+        CHECK(panes.x2() == client.x2() && panes.y2() == client.y2());
+        CHECK(window_.right_.get_bounds().x2() == client.w());
+        CHECK(window_.summary_.get_bounds().x2() == window_.right_.get_bounds().w());
+        CHECK(window_.message_pane_.get_bounds().x2() == window_.right_.get_bounds().w());
+        CHECK(window_.toolbar_.get_bounds().x2() == client.x2());
+        CHECK(window_.search_bar_.get_bounds().x2() == client.x2());
+        if (native::resources::current_context().toolkit == "gemix")
+            CHECK(footer.x2() < client.x2());
+        const auto appearance = native::theme::create(window_.get_gpx());
+        CHECK(footer.h() == appearance->get_status_bar_height());
+        const int height = appearance->get_toolbar_height();
+        const auto metrics = appearance->defaults();
+        const int controls_height = std::max(height,
+            metrics.text_edit_height + 2 * (metrics.toolbar_padding +
+                                            metrics.toolbar_control_padding));
+        CHECK(window_.toolbar_.get_extent() == height);
+        CHECK(window_.search_bar_.get_extent() == controls_height);
+        CHECK(window_.toolbar_.get_bounds().y2() ==
+              window_.search_bar_.get_bounds().y1());
+        const auto button = window_.toolbar_.get_item_bounds("fileNew");
+        CHECK(button.w() == button.h());
+        // The painter reserves four horizontal pixels around the image.
+        CHECK(button.w() >= window_.toolbar_.get_icon_size().w + 4);
+        CHECK(button.h() >= window_.toolbar_.get_icon_size().h);
+        int previous_button_right = -1;
+        bool follows_separator = false;
+        for (const auto &item : window_.toolbar_.get_items()) {
+            if (item.kind == native::tool_kind::separator) {
+                CHECK(item.length == button.w());
+                follows_separator = true;
+                continue;
+            }
+            const auto slot = window_.toolbar_.get_item_bounds(item.id);
+            if (follows_separator)
+                CHECK(slot.x1() - previous_button_right == button.w());
+            previous_button_right = slot.x2();
+            follows_separator = false;
+        }
+        int top = -1;
+        int previous_right = -1;
+        for (const auto &item : window_.search_bar_.get_items()) {
+            if (!item.control) continue;
+            const auto slot = window_.search_bar_.get_item_bounds(item.id);
+            const auto child = item.control->get_bounds();
+            if (std::getenv("BLAISE_TEST_TRACE"))
+                std::cerr << item.id << " slot=" << slot.x1() << ','
+                          << slot.y1() << ',' << slot.w() << ',' << slot.h()
+                          << " child=" << child.x1() << ',' << child.y1()
+                          << ',' << child.w() << ',' << child.h() << '\n';
+            CHECK(child.x1() >= slot.x1() && child.x2() <= slot.x2());
+            CHECK(item.control->get_border_sides() == native::border_sides::right);
+            CHECK(child.x1() == slot.x1() && child.x2() == slot.x2());
+            if (previous_right >= 0) CHECK(child.x1() == previous_right);
+            previous_right = child.x2();
+            CHECK(child.y1() >= slot.y1() && child.y2() <= slot.y2());
+            CHECK(child.h() >= native::font_t::stock(
+                native::font_role::control).get_metrics().height);
+            if (top >= 0) CHECK(child.y1() == top);
+            top = child.y1();
+        }
     }
 
     void test_reading() {
@@ -223,6 +330,26 @@ private:
             CHECK(window_.message_pane_.get_text().find("Message-ID") !=
                   std::string::npos);
             window_.run("toggleHeaders");
+        });
+        act("table keyboard scrolling and columns", [this] {
+            auto &table = window_.summary_;
+            const auto original = table.get_bounds();
+            const auto column = table.get_columns().front();
+            table.on_native_column_resize(column.id, column.width + 16);
+            CHECK(table.get_columns().front().width == column.width + 16);
+            table.on_native_column_resize(column.id, column.width);
+            table.on_native_navigation(native::table_navigation::select_all);
+            CHECK(table.get_selected_rows().size() == 3);
+            // A one-row viewport forces the existing native scroll path.
+            const auto metrics = native::theme::create(window_.get_gpx())->defaults();
+            table.set_bounds(native::rect(original.x1(), original.y1(),
+                original.w(), metrics.header_height + metrics.table_row_height));
+            table.on_native_scroll(2, 0);
+            CHECK(table.get_vertical_scroll_row() > 0);
+            table.on_native_scroll(0, 0);
+            CHECK(table.get_vertical_scroll_row() == 0);
+            table.set_bounds(original);
+            table.select_number(3);
         });
     }
 
@@ -291,6 +418,12 @@ private:
             CHECK(window_.composers_.size() == 1);
             ui::compose_window &compose = *window_.composers_.front();
             CHECK(compose.get_created());
+            const auto &tools = compose.toolbar_.get_items();
+            const int button_width =
+                compose.toolbar_.get_item_bounds(tools.front().id).w();
+            for (const auto &item : tools)
+                if (item.kind == native::tool_kind::separator)
+                    CHECK(item.length == button_width);
             const compose::draft text = compose.current();
             CHECK(text.to == "Ana Novak <ana@x.org>");
             CHECK(text.subject == "Re: First");

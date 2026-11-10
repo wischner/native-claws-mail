@@ -122,7 +122,7 @@
         }
     },
     "linux-gemix-gemd": {
-        "image": "wischner/gcc-x86_64-gemix:1.4.1",
+        "image": "wischner/gcc-x86_64-gemix:latest",
         "cmake": [
             "-DTOOLKIT=GEMIX",
             "-DGEMIX_USE_GEMD=ON"

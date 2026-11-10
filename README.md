@@ -42,10 +42,21 @@ compiler, headers or `../native` checkout:
   Dockerfile builds a new image. `DOCKER_IMAGE=...` uses another image.
 - **Native.** [Native](https://github.com/wischner/native) is fetched into
   `build/deps/native` at the commit pinned in `scripts/build/fetch_native.sh`.
+  The fetch script also applies the shared toolbar-control and pane-chrome patches in
+  `scripts/build/patches/`, pending its inclusion in the next Native pin.
   `NATIVE_REF=<commit, tag or branch> make` builds another revision;
   `NATIVE_ROOT=/path/to/native make` builds against your own checkout.
 - **Output.** Objects go to `build/sdl2/<mode>/`, binaries to `bin/`, release
   zips to `dist/`.
+
+GEM builds use `wischner/gcc-x86_64-gemix:latest`. To test a local GEM runtime
+before it reaches that image, set `GEM_RUNTIME_ROOT` to its `GEM_OUTPUT_ROOT`
+(the directory containing `core/gemd` and `lib/libaes.so`). For a persistent
+workspace selection, put that absolute path in `build/gem-runtime.path`.
+Both the platform tests and GEM F5 launcher mount and run that server while
+retaining the published Docker compiler and SDK. The selected path is printed
+at launch. An empty `GEM_RUNTIME_ROOT` or deleting the path file restores the
+image's server; a missing selected runtime fails explicitly.
 
 TLS is on: the image has OpenSSL. `make TLS=none` builds without it, and
 connections that ask for TLS then fail with a message. See [TLS](docs/notes/TLS.md).
@@ -79,9 +90,28 @@ Accounts. Keep a backup of `~/Mail` the first time.
 **VS Code F5** builds and debugs the selected backend. Profiles are named
 `<name>, <env>`: `SDL2, Local`, `X11, Xephyr`, `GEM, Rasta` and so on.
 
+`GEM, Rasta` starts a Python POP3/SMTP test mailbox with the debugger and
+opens an inbox containing seven synthetic messages. It includes a reply thread,
+Unicode text, HTML, a CSV attachment and a long message. Sending captures mail
+locally; **Get Mail** downloads the captured messages back into the test inbox.
+The server stops when the debug session ends, including **Stop**.
+
+This F5-only account and its mail persist under ignored `build/uat-mail/`,
+separate from your normal account. Delete that directory while debugging is
+stopped to reset the samples. Normal builds and distribution packages neither
+start nor include the test server, account setup or sample mail.
+
 All application UI goes through Native's public API. The default build selects
 Native's SDL2 backend; `make platform-test` builds the others. See
 [platform status](docs/notes/PLATFORM-STATUS.md).
+
+The pinned Native dependency includes shared toolbar metrics and standard icons;
+no sibling checkout or dependency override is needed. For the latest GEMix SDK:
+
+```sh
+docker pull wischner/gcc-x86_64-gemix:latest
+python3 scripts/build/platforms.py linux-gemix-gemd
+```
 
 ## Using it
 

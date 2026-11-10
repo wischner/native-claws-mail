@@ -25,7 +25,6 @@
 namespace ui {
 namespace {
 
-constexpr int bar_extent = 30;
 constexpr int search_length = 320;
 
 // One toolbar entry; an empty command is a separator.
@@ -87,7 +86,7 @@ native::tool_item make_tool(const tool_entry &entry) {
     return item;
 }
 
-// Return a hosted control item.
+// Join toolbar fields at a single right border; the bar owns horizontal rules.
 native::tool_item make_control(const char *id, native::wnd &control,
                                int length) {
     native::tool_item item;
@@ -95,6 +94,8 @@ native::tool_item make_control(const char *id, native::wnd &control,
     item.kind = native::tool_kind::control;
     item.control = &control;
     item.length = length;
+    item.control_fill_width = true;
+    control.set_border_sides(native::border_sides::right);
     return item;
 }
 
@@ -110,18 +111,17 @@ void update_enabled(native::toolbar &bar, const std::string &id, bool value) {
 
 main_window::main_window(const app::options &settings)
     : native::app_wnd("Blaise", 60, 40, 1000, 760), settings_(settings),
-      search_box_("", native::text_edit_mode::single_line, 6, 5, 320, 24),
+      search_box_("", native::text_edit_mode::single_line, 0, 0, search_length, 24),
       show_box_({"All", "Unread"}, native::combo_box_style::drop_down_list, 0,
-                5, 100, 24),
-      sort_box_(sort_labels(), native::combo_box_style::drop_down_list, 0, 5,
+                0, 100, 24),
+      sort_box_(sort_labels(), native::combo_box_style::drop_down_list, 0, 0,
                 110, 24),
       summary_(model_), right_(summary_, message_pane_,
                                native::split_orientation::vertical, 0, 0, 760,
                                600),
       split_(folders_, right_, native::split_orientation::horizontal, 0, 0,
              1000, 600),
-      toolbar_(*this, native::window_edge::top, bar_extent),
-      search_bar_(*this, native::window_edge::top, bar_extent),
+      toolbar_(*this), search_bar_(*this),
       status_(*this), open_dialog_(*this, "Open"),
       save_dialog_(*this, "Save As"), input_(*this), choice_(*this),
       account_window_(*this,
@@ -143,6 +143,12 @@ main_window::main_window(const app::options &settings)
           native::app::post(std::move(work));
       }),
       core_(settings.where, jobs_, *this, settings.connect) {
+    // The window frame and toolbar/status rules enclose the outer edges.
+    folders_.set_border_sides(native::border_sides::right);
+    summary_.set_border_sides(native::border_sides::left |
+                             native::border_sides::bottom);
+    message_pane_.set_border_sides(native::border_sides::left |
+                                  native::border_sides::top);
     split_.set_ratio(0.22f).set_minimums(120, 300);
     right_.set_ratio(0.45f).set_minimums(80, 80);
     build_menu();
@@ -162,8 +168,11 @@ main_window::main_window(const app::options &settings)
     });
 
     on_wnd_create.connect([this] {
-        status_.set_extent(
-            native::theme::create(get_gpx())->get_status_bar_height());
+        const auto appearance = native::theme::create(get_gpx());
+        toolbar_.set_extent(appearance->get_toolbar_height());
+        size_toolbar_separators(toolbar_);
+        search_bar_.set_extent(appearance->get_toolbar_height());
+        status_.set_extent(appearance->get_status_bar_height());
         split_.set_parent(this);
         split_.create();
         split_.show();
@@ -177,10 +186,6 @@ main_window::main_window(const app::options &settings)
             "use Tools, Accounts.\n");
         update_state();
         start_timer();
-        return true;
-    });
-    on_wnd_resize.connect([this](native::size) {
-        place_children();
         return true;
     });
     on_menu.connect([this](int id) {
@@ -213,6 +218,11 @@ void main_window::place_children() {
     split_.set_bounds(get_client_bounds());
 }
 
+void main_window::on_bounds_changed() {
+    native::app_wnd::on_bounds_changed();
+    place_children();
+}
+
 void main_window::build_toolbar() {
     for (const tool_entry &entry : tools)
         toolbar_.add_item(make_tool(entry));
@@ -223,7 +233,7 @@ void main_window::build_toolbar() {
 }
 
 void main_window::build_search_bar() {
-    search_bar_.add_item(make_control("searchBox", search_box_, 320));
+    search_bar_.add_item(make_control("searchBox", search_box_, search_length));
     search_bar_.add_item(make_control("showBox", show_box_, 100));
     search_bar_.add_item(make_control("sortBox", sort_box_, 110));
     native::tool_item threads = make_tool(

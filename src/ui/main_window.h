@@ -58,6 +58,7 @@ private:
     void build_toolbar();
     void build_search_bar();
     void place_children();
+    void on_bounds_changed() override;
     void connect_panes();
     void run(std::string_view command);
     bool run_folder_command(std::string_view command);

@@ -73,8 +73,6 @@ protected:
 private:
     view::summary_model &model_;
     summary_source source_;
-    native::font_t bold_;
-    bool bold_searched_ = false;
 };
 
 } // namespace ui

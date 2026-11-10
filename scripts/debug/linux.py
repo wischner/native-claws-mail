@@ -7,13 +7,16 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/build'))
-from platforms import NATIVE, PLATFORMS  # noqa: E402  (fetches Native)
+from platforms import NATIVE, PLATFORMS, gem_runtime_docker_args  # noqa: E402
 PREFIXES = {'cde-xephyr': 'CDE', 'openlook-xephyr': 'OPENLOOK',
             'window-maker-xephyr': 'WINDOW_MAKER'}
 
 backend, *command = sys.argv[1:]
+demo_mail = command[:1] == ['--demo-mail']
+if demo_mail:
+    command = command[1:]
 if backend not in PLATFORMS or not command:
-    sys.exit('usage: linux.py BACKEND debugger [arguments]')
+    sys.exit('usage: linux.py BACKEND [--demo-mail] debugger [arguments]')
 if len(command) == 1:
     command = shlex.split(command[0])  # cppdbg may supply "gdb --interpreter=mi"
 if not os.environ.get('DISPLAY'):
@@ -48,7 +51,13 @@ if session in PREFIXES:
 elif session == 'x11':
     wrapper = ['bash', str(NATIVE / 'scripts/linux/x11/run-twm.sh')]
 elif session == 'gemix':
+    args += gem_runtime_docker_args(item)
     args += ['-e', f'NATIVE_ROOT={NATIVE}',
              '-e', f'BLAISE_GEMD={int(item.get("gemd", False))}']
     wrapper = ['bash', str(ROOT / 'scripts/debug/gem-session.sh')]
+if demo_mail:
+    wrapper = ['python3', '-B', str(ROOT / 'scripts/test/demo_mail.py'),
+               '--state', str(ROOT / 'build/uat-mail'),
+               '--client', str(ROOT / 'build/platforms' / backend / 'debug/bin/blaise'),
+               '--'] + wrapper
 os.execvp('docker', args + [item['image']] + wrapper + command)

@@ -12,6 +12,13 @@ are Blaise's own: `getMail`, `sendMail`, `reply`, `replyAll`, `forward`,
 palette. All are original project artwork, 16×16, not copies of Claws Mail's.
 `export_icons.cpp` holds the drawing instructions.
 
+`ui::tool_icon()` first asks Native's shared `standard_icon` catalog. On GEM,
+New, Open, Save, Undo, Cut, Copy and Paste use Ted's exact 16×16 masks instead
+of these fallback PNGs. Native also exposes Ted's Save As icon. No GEM artwork
+is copied into this application's resources. Redo, Find and mail-specific
+commands retain their existing resources because the audited GEM SDK has no
+canonical icon for those operations. Other backends retain the existing PNGs.
+
 Monochrome pixels are black with either zero or full alpha, so Native can tint
 the mask white on a selected button.
 
@@ -23,7 +30,7 @@ this manifest and the public Native resource API. Icon themes are not ported.
 | Entry point | Responsibility |
 | --- | --- |
 | `ui::graphics_resources()` | Decode the embedded bytes once into an immutable `native::resources` |
-| `ui::tool_icon(command)` | Resolve `icons.toolbar.<command>` and decode the selected PNG; unknown commands return null |
+| `ui::tool_icon(command)` | Prefer Native's standard command icon, then resolve and decode the resource fallback; unknown commands return null |
 | `export_icons` | Reproduce both asset sets from the drawing functions, outside normal builds |
 | Native `rc` | Validate the manifest and generate the pack and embedded translation unit |
 

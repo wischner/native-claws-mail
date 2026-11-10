@@ -20,7 +20,6 @@
 namespace ui {
 namespace {
 
-constexpr int bar_extent = 30;
 constexpr int label_width = 64;
 constexpr int row_height = 28;
 constexpr int margin = 8;
@@ -87,7 +86,7 @@ compose_window::compose_window(native::app_wnd &owner, app::engine &core,
       bcc_("", native::text_edit_mode::single_line, 0, 0, 600, 24),
       subject_("", native::text_edit_mode::single_line, 0, 0, 600, 24),
       body_("", 0, 0, 600, 300), files_({}, 0, 0, 600, files_height),
-      toolbar_(*this, native::window_edge::top, bar_extent), status_(*this),
+      toolbar_(*this), status_(*this),
       attach_dialog_(*this, "Attach File") {
     build_toolbar();
     body_.set_show_line_numbers(false);
@@ -146,8 +145,10 @@ compose_window::compose_window(native::app_wnd &owner, app::engine &core,
         return true;
     });
     on_wnd_create.connect([this] {
-        status_.set_extent(
-            native::theme::create(get_gpx())->get_status_bar_height());
+        const auto appearance = native::theme::create(get_gpx());
+        toolbar_.set_extent(appearance->get_toolbar_height());
+        size_toolbar_separators(toolbar_);
+        status_.set_extent(appearance->get_status_bar_height());
         for (native::wnd *child :
              std::initializer_list<native::wnd *>{
                  &from_, &to_, &cc_, &bcc_, &subject_, &body_, &files_}) {

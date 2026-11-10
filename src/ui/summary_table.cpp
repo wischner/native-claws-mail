@@ -9,39 +9,9 @@
 
 #include "summary_table.h"
 
-#include <algorithm>
-
 #include "util/date.h"
 
 namespace ui {
-namespace {
-
-// Return a bold face matching the stock control font, or an invalid font.
-native::font_t find_bold_font() {
-    const native::font_t &stock =
-        native::font_t::stock(native::font_role::control);
-    const int size = stock.spec().size;
-    const native::font_description *best = nullptr;
-    const auto faces = native::font_t::enumerate_installed();
-    for (const native::font_description &face : faces) {
-        if (face.weight < 600 || face.italic)
-            continue;
-        const bool preferred = face.family == "DejaVu Sans" ||
-                               face.family == "Liberation Sans";
-        if (best == nullptr || preferred)
-            best = &face;
-        if (preferred)
-            break;
-    }
-    if (best == nullptr)
-        return {};
-    return native::font_t::from_file(best->path, std::max(size, 8),
-                                     best->face_index,
-                                     native::font_size_basis::em);
-}
-
-} // namespace
-
 std::size_t summary_source::row_count() const {
     return model_.rows().size();
 }
@@ -74,8 +44,7 @@ native::table_cell summary_source::cell(std::size_t row,
 void summary_source::reset() { on_change.emit({}); }
 
 summary_table::summary_table(view::summary_model &model)
-    : native::table_view(0, 0, 760, 280), model_(model), source_(model),
-      bold_() {
+    : native::table_view(0, 0, 760, 280), model_(model), source_(model) {
     native::table_column status;
     status.id = summary_source::status;
     status.title = "";
@@ -145,33 +114,19 @@ void summary_table::draw_cell_content(
          column.id == summary_source::from) &&
         model_row < model_.rows().size() &&
         model_.at(model_row).has(mail::flag_unread);
-    // Fonts need the backend, which does not exist during construction.
-    if (emphasized && !bold_searched_) {
-        bold_searched_ = true;
-        bold_ = find_bold_font();
-    }
-    if (!emphasized || !bold_.valid()) {
+    // Use Native's stock table font, padding, selection colors and ellipsis.
+    native::table_view::draw_cell_content(graphics, appearance, row,
+                                          model_row, column, cell, bounds,
+                                          state);
+    if (emphasized) {
+        // Match code_edit's bold field labels: overstrike the same system
+        // glyphs one pixel to the right without changing their font metrics.
+        native::rect bold_bounds = bounds;
+        ++bold_bounds.p.x;
         native::table_view::draw_cell_content(graphics, appearance, row,
-                                              model_row, column, cell, bounds,
-                                              state);
-        return;
+                                              model_row, column, cell,
+                                              bold_bounds, state);
     }
-    const native::theme::palette colors = appearance.native_palette();
-    const int padding = appearance.defaults().header_padding_x;
-    native::text_layout layout;
-    layout.vertical = native::text_valign::center;
-    graphics.set_font(bold_);
-    graphics.set_ink(state.selected ? colors.selection_text
-                                    : colors.content_text);
-    graphics.draw_text(
-        cell.text,
-        native::rect(static_cast<native::coord>(bounds.p.x + padding),
-                     bounds.p.y,
-                     static_cast<native::dim>(
-                         std::max(0, static_cast<int>(bounds.d.w) -
-                                         padding * 2)),
-                     bounds.d.h),
-        layout);
 }
 
 } // namespace ui

@@ -1,5 +1,5 @@
 //
-// Embedded toolbar artwork selected by Native for the current backend.
+// Standard Native command artwork with embedded application fallbacks.
 // GEM and X11 receive binary ink masks; other backends receive color icons.
 //
 // GPL 3.0 or later (see: LICENSE)
@@ -21,6 +21,9 @@ const native::resources &graphics_resources();
 
 // Return the icon of a toolbar command, or null when it has none.
 std::shared_ptr<const native::img> tool_icon(std::string_view command);
+
+// Give each group separator one icon button's measured width after layout.
+void size_toolbar_separators(native::toolbar &bar);
 
 } // namespace ui
 

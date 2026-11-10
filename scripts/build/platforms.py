@@ -53,6 +53,25 @@ def build_dir(name, mode):
     return ROOT / 'build/platforms' / name / mode
 
 
+def gem_runtime_docker_args(spec):
+    """Use an explicitly selected local GEM server with the published SDK."""
+    if spec.get('session') != 'gemix':
+        return []
+    selection = ROOT / 'build/gem-runtime.path'
+    named = os.environ.get('GEM_RUNTIME_ROOT')
+    if named is None and selection.is_file():
+        named = selection.read_text().strip()
+    if not named:
+        return []
+    runtime = Path(named).expanduser().resolve()
+    server = runtime / 'core/gemd'
+    if not server.is_file() or not (runtime / 'lib/libaes.so').is_file():
+        raise RuntimeError(f'Incomplete GEM runtime: {runtime}; rebuild it or '
+                           'clear GEM_RUNTIME_ROOT and build/gem-runtime.path')
+    print(f'GEM runtime: {runtime}', file=sys.stderr)
+    return ['-v', f'{runtime}:{runtime}:ro', '-e', f'GEMD_BIN={server}']
+
+
 def ensure_image(spec):
     """Build an SDK image that is not on Docker Hub from its Dockerfile."""
     if 'dockerfile' not in spec:
@@ -84,7 +103,8 @@ def run_one(name, mode, build_only, resources_only=False):
     docker = ['docker', 'run', '--rm', '--init', '-u',
               f'{os.getuid()}:{os.getgid()}', '-e', 'HOME=/tmp',
               '-e', 'ASAN_OPTIONS=detect_leaks=0', '-v', f'{ROOT}:{ROOT}',
-              '-v', f'{NATIVE}:{NATIVE}', '-w', str(ROOT), spec['image']]
+              '-v', f'{NATIVE}:{NATIVE}', '-w', str(ROOT),
+              *gem_runtime_docker_args(spec), spec['image']]
     stages = {
         'configure': ['cmake', '-S', '.', '-B', str(build),
                       f'-DNATIVE_ROOT={NATIVE}',
