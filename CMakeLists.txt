@@ -81,6 +81,8 @@ target_include_directories(blaise_ui PUBLIC src/ui)
 target_link_libraries(blaise_ui PUBLIC blaise_core native)
 
 add_executable(blaise WIN32 src/main.cpp)
+# The desktop icon ships beside the executable (GEMiX converts it with resgen).
+configure_file(assets/icons/BLAISE.PNG "${CMAKE_BINARY_DIR}/bin/BLAISE.PNG" COPYONLY)
 target_link_libraries(blaise PRIVATE blaise_ui)
 
 file(GLOB ui_tests CONFIGURE_DEPENDS tests/ui/test_*.cpp)

@@ -63,6 +63,9 @@ git tag -f v1.2.3 && git push -f origin v1.2.3
 
 - The executable, `README.md` written for that backend from the `package`
   entry in `platforms.json`, `LICENSE` and `THIRD-PARTY-NOTICES.md`.
+- `BLAISE.PNG`, the desktop icon from `assets/icons/`, beside the executable.
+  GEMiX images convert it to `/opt/gem/share/gem/icons/blaise.rsc`; see
+  [Desktop icon](../../README.md#desktop-icon).
 - **Linux:** every library in the executable's closure that no Ubuntu package
   owns, copied to `lib/` (the executable's RUNPATH is `$ORIGIN/lib`). Libraries
   that a package owns are not copied; the README lists their packages on an

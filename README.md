@@ -122,6 +122,27 @@ make list-platforms
 See [testing](docs/notes/TESTING.md). Tests run in Docker, so ASan works even
 on hosts that preload a security agent; see [that note](docs/notes/HOST-ASAN.md).
 
+## Desktop icon
+
+Blaise's desktop icon is [`assets/icons/BLAISE.PNG`](assets/icons/BLAISE.PNG): 32x32
+pixels, black ink on white paper, transparent outside the icon. The build
+copies it next to the executable: `make` writes `bin/BLAISE.PNG`, and every
+release zip has `BLAISE.PNG` beside `blaise`.
+
+To build a GEMiX image, take `BLAISE.PNG` from the `linux-gemix-gemd` release
+zip, convert it with GEM's `resgen` and install it under the lowercase program
+name, matching the program entry `/opt/gem/Programs/blaise`:
+
+```sh
+resgen icons -o blaise.rsc BLAISE.PNG
+install -m 0644 blaise.rsc /opt/gem/share/gem/icons/blaise.rsc
+```
+
+GEM Desktop then shows the icon for `blaise` in the Programs folder. Without
+the file, Desktop shows the standard program icon. GEM's
+[program deployment guide](https://github.com/triglav-os/gem/blob/main/docs/guides/PROGRAM_DEPLOYMENT.md)
+explains how Desktop finds icons.
+
 ## Releases
 
 Pushing a `vX.Y.Z` tag runs `make` and `make test`, builds every backend and
