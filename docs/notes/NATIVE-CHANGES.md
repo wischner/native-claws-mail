@@ -50,9 +50,8 @@ from an icon button after the theme's toolbar height has been applied. Each
 separator occupies one button width without introducing fixed dimensions.
 GEM draws its divider at the trailing edge of that slot, matching button
 borders, so the visible blank cell is also a full button wide.
-The sibling Native checkout already supports separator lengths; the pinned
-dependency receives the same implementation through
-`scripts/build/patches/native-toolbar-separator-length.patch`.
+Native v1.0.5 provides separator lengths, so no patch is carried. Its GEM
+theme also makes a separator without an explicit length one button wide.
 
 ### Pane edges and resize corner
 
@@ -69,8 +68,8 @@ Native's table header painter now honors omitted outer edges instead of
 redrawing them as cell borders. Window-owned GEM status bars stop before the
 resize corner; the private backend derives its span from AES `wind_calc`.
 Nested document status bars and windows with native scroll tracks retain their
-existing bounds. These shared fixes also live in `../native` and are carried
-by `scripts/build/patches/native-pane-chrome.patch` for default dependency builds.
+existing bounds. These shared fixes are part of Native v1.0.5, the pinned
+release, so no patch is carried.
 
 The published GEM image at digest
 `sha256:14c2c1638d545a175a9e16489f32a47a392c2b1ce44e140f1fffba1a96b6b423`
@@ -103,8 +102,8 @@ older server can reintroduce menu or startup failures.
 
 ### GEM toolbar consistency
 
-The toolbar update uses Native revision
-`c4191f853e2e23223d0fe50cf812309f08ce0a0d`, pinned in
+Blaise pins the Native v1.0.5 release,
+`3184fd615d67bb27cdacc09e6a30b4c0123fa891`, in
 `scripts/build/fetch_native.sh`. Normal Make, CMake and VS Code builds fetch
 this revision automatically; no `NATIVE_ROOT` override is required. A custom
 Native checkout must include the shared toolbar and standard-icon APIs.
@@ -112,12 +111,8 @@ Native checkout must include the shared toolbar and standard-icon APIs.
 The search/filter/sort fields use `border_sides::right` and
 `tool_item::control_fill_width`, so adjacent controls meet at one separator
 without their own top, bottom or left borders. Native still owns control
-placement, vertical alignment, focus and dropdown behavior. The shared
-`control_fill_width` option is carried as
-`scripts/build/patches/native-toolbar-controls.patch` until included in the
-next pinned Native revision; the patch is the same change as in `../native`.
-The fetch stamp includes its hash, so ordinary builds update automatically.
-Custom Native checkouts must also include this option.
+placement, vertical alignment, focus and dropdown behavior. Native v1.0.5
+provides `control_fill_width`; custom Native checkouts must include it too.
 
 - `theme::get_toolbar_height()` exposes the backend's standard band. GEM calls
   `gemctl_chrome_layout`, the same helper Gemscape and Ted use. Both main rows

@@ -235,8 +235,10 @@ private:
         CHECK(window_.message_pane_.get_bounds().x2() == window_.right_.get_bounds().w());
         CHECK(window_.toolbar_.get_bounds().x2() == client.x2());
         CHECK(window_.search_bar_.get_bounds().x2() == client.x2());
+        // GEM's one-pixel compact frame has no corner grip: Native lets the
+        // window status bar span the client area up to that border.
         if (native::resources::current_context().toolkit == "gemix")
-            CHECK(footer.x2() < client.x2());
+            CHECK(footer.x2() == client.x2());
         const auto appearance = native::theme::create(window_.get_gpx());
         CHECK(footer.h() == appearance->get_status_bar_height());
         const int height = appearance->get_toolbar_height();

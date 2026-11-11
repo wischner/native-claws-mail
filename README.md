@@ -42,9 +42,10 @@ compiler, headers or `../native` checkout:
   Dockerfile builds a new image. `DOCKER_IMAGE=...` uses another image.
 - **Native.** [Native](https://github.com/wischner/native) is fetched into
   `build/deps/native` at the commit pinned in `scripts/build/fetch_native.sh`.
-  The fetch script also applies the shared toolbar-control, separator and
-  pane-chrome patches in `scripts/build/patches/`, pending their inclusion in
-  the next Native pin. See [Native integration](docs/notes/NATIVE-CHANGES.md).
+  The pin is the Native v1.0.5 release, which includes the toolbar-control,
+  separator and pane-chrome fixes. The fetch script still applies any patch
+  placed in `scripts/build/patches/`; there are none at this pin. See
+  [Native integration](docs/notes/NATIVE-CHANGES.md).
   `NATIVE_REF=<commit, tag or branch> make` builds another revision;
   `NATIVE_ROOT=/path/to/native make` builds against your own checkout.
 - **Output.** Objects go to `build/sdl2/<mode>/`, binaries to `bin/`, release
