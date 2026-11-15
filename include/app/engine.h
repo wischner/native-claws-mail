@@ -41,7 +41,15 @@ struct paths {
     std::filesystem::path config;
     std::filesystem::path mail;
 
-    // Return the defaults: ~/.blaise and ~/Mail.
+    std::filesystem::path data = {};
+    std::filesystem::path cache = {};
+
+    // Create storage and copy legacy defaults without deleting the originals.
+    void prepare() const;
+    std::filesystem::path address_book() const;
+    std::filesystem::path imap_cache() const;
+
+    // Return XDG defaults, preserving an existing ~/Mail.
     static paths defaults();
 };
 
@@ -74,6 +82,9 @@ struct folder_view {
 class engine_listener {
 public:
     virtual ~engine_listener() = default;
+
+    // Delivered after settings have loaded or successfully saved.
+    virtual void preferences_changed(const prefs::common &, bool) {}
 
     // The folder tree or its counts changed.
     virtual void folders_changed(const std::vector<folder_node> &tree) = 0;
@@ -261,6 +272,7 @@ private:
     prefs::account_list accounts_;
     prefs::common preferences_;
     filter::rule_set rules_;
+    bool loaded_ = false;
 };
 
 } // namespace app

@@ -8,14 +8,28 @@
 
 #include "form_window.h"
 
+#include <algorithm>
+
 namespace ui {
 namespace {
 
 constexpr int button_width = 88;
-constexpr int button_height = 28;
+constexpr int button_height = 30;
 constexpr int margin = 12;
 
 } // namespace
+
+int form_control_height(native::wnd &window) {
+    const auto appearance = native::theme::create(window.get_gpx());
+    const int themed = appearance->get_form_control_height();
+    // Native constrains single-line inputs to this exact height.
+    return themed > 0 ? themed : appearance->defaults().text_edit_height;
+}
+
+void tab_sequence(std::initializer_list<native::wnd *> controls) {
+    unsigned order = 0;
+    for (auto *control : controls) control->set_tab_order(++order);
+}
 
 form_window::form_window(native::app_wnd &owner, const std::string &title,
                          int width, int height)
@@ -29,12 +43,18 @@ form_window::form_window(native::app_wnd &owner, const std::string &title,
       cancel_("Cancel",
               static_cast<native::coord>(width - button_width - margin),
               static_cast<native::coord>(height - button_height - margin),
-              button_width, button_height) {
+              button_width, button_height), minimum_width_(width) {
     on_wnd_create.connect([this] {
+        controls_.clear();
+        populate();
         attach(ok_);
         attach(cancel_);
-        populate();
         populated_ = true;
+        place_children();
+        return true;
+    });
+    on_wnd_resize.connect([this](native::size) {
+        if (populated_) place_children();
         return true;
     });
     on_wnd_paint.connect([this](native::wnd_paint_event event) {
@@ -47,7 +67,7 @@ form_window::form_window(native::app_wnd &owner, const std::string &title,
             event.g.draw_text(item.text,
                               native::rect(static_cast<native::coord>(item.x),
                                            static_cast<native::coord>(item.y),
-                                           400, 24),
+                                           item.width, field_height()),
                               layout);
         return true;
     });
@@ -71,6 +91,8 @@ void form_window::set_caption(std::size_t index, const std::string &text) {
 }
 
 void form_window::attach(native::wnd &child) {
+    child.set_tab_order(static_cast<unsigned>(controls_.size() + 1));
+    controls_.push_back(&child);
     child.set_parent(this);
     child.create();
     child.show();
@@ -82,6 +104,31 @@ void form_window::open() {
     prepare();
     center_to_parent();
     show();
+    if (!controls_.empty()) controls_.front()->focus();
+    invalidate();
+}
+
+void form_window::caption_bounds(std::size_t index, int x, int y, int width) {
+    auto &caption = captions_.at(index);
+    caption.x = x;
+    caption.y = y;
+    caption.width = width;
+}
+
+void form_window::place_children() {
+    if (laying_out_) return;
+    laying_out_ = true;
+    if (get_dimensions().w < minimum_width_)
+        set_dimensions(native::size(minimum_width_, get_dimensions().h));
+    const int bottom = layout();
+    const int height = bottom + 2 * margin + field_height();
+    set_dimensions(native::size(get_dimensions().w, height));
+    const int width = get_client_bounds().w();
+    ok_.set_bounds(native::rect(width - 2 * button_width - margin - 8,
+                               bottom + margin, button_width, field_height()));
+    cancel_.set_bounds(native::rect(width - button_width - margin,
+                                   bottom + margin, button_width, field_height()));
+    laying_out_ = false;
     invalidate();
 }
 
@@ -94,11 +141,18 @@ void form_window::finish(bool accepted) {
 
 input_window::input_window(native::app_wnd &owner)
     : form_window(owner, "Blaise", 380, 124),
-      answer_("", native::text_edit_mode::single_line, 12, 40, 356, 26) {
+      answer_("", native::text_edit_mode::single_line) {
     add_caption("", 12, 10);
 }
 
 void input_window::populate() { attach(answer_); }
+
+int input_window::layout() {
+    const int width = get_client_bounds().w() - 24;
+    caption_bounds(0, 12, 12, width);
+    answer_.set_bounds(native::rect(12, row_y(1), width, field_height()));
+    return row_y(1) + field_height();
+}
 
 void input_window::ask(const std::string &title, const std::string &prompt,
                        const std::string &initial,
@@ -109,9 +163,7 @@ void input_window::ask(const std::string &title, const std::string &prompt,
     if (!get_created())
         create();
     answer_.set_text(initial);
-    center_to_parent();
-    show();
-    invalidate();
+    open();
 }
 
 bool input_window::accept() {
@@ -124,9 +176,14 @@ bool input_window::accept() {
 }
 
 choice_window::choice_window(native::app_wnd &owner)
-    : form_window(owner, "Blaise", 380, 340), rows_({}, 12, 12, 356, 276) {}
+    : form_window(owner, "Blaise", 380, 340), rows_() {}
 
 void choice_window::populate() { attach(rows_); }
+
+int choice_window::layout() {
+    rows_.set_bounds(native::rect(12, 12, get_client_bounds().w() - 24, 240));
+    return 252;
+}
 
 void choice_window::ask(const std::string &title,
                         std::vector<std::string> labels,

@@ -10,6 +10,8 @@
 
 #include "addr/book.h"
 
+#include <stdexcept>
+
 #include <algorithm>
 #include <cstdio>
 #include <map>
@@ -255,41 +257,60 @@ std::vector<completion> book::group_addresses(const group &item) const {
 }
 
 void book_list::load(const fs::path &directory) {
-    books_.clear();
-    files_.clear();
+    std::vector<book> books;
+    std::vector<std::string> files;
     index_reader index;
-    if (const auto text = util::read_file(directory / index_name)) {
+    const auto text = util::read_file(directory / index_name);
+    if (text) {
         std::string error;
-        util::parse_xml(*text, index, error);
+        if (!util::parse_xml(*text, index, error))
+            throw std::runtime_error("Could not parse address book index " + (directory / index_name).string());
+    } else if (fs::exists(directory / index_name)) {
+        throw std::runtime_error("Could not read address book index " + (directory / index_name).string());
     }
     for (const auto &[name, file] : index.entries) {
         book item(name);
-        // A file name must stay inside the directory.
-        if (file.find('/') != std::string::npos)
-            continue;
-        if (item.load(directory / file)) {
-            books_.push_back(std::move(item));
-            files_.push_back(file);
-        }
+        if (fs::path(file) != fs::path(file).filename() || file == "." || file == ".." ||
+            !item.load(directory / file))
+            throw std::runtime_error("Could not load address book " + (directory / file).string());
+        books.push_back(std::move(item));
+        files.push_back(file);
     }
+    books_ = std::move(books);
+    files_ = std::move(files);
 }
 
 bool book_list::save(const fs::path &directory) const {
     std::string index = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                         "<addressbook>\n  <book_list>\n";
     bool ok = true;
+    std::vector<std::pair<fs::path, std::optional<std::string>>> previous;
     for (std::size_t i = 0; i < books_.size(); ++i) {
         char file[48];
         std::snprintf(file, sizeof file, "addrbook-%06zu.xml", i + 1);
         const std::string name = i < files_.size() ? files_[i] : file;
-        ok = books_[i].save(directory / name) && ok;
+        const auto path = directory / name;
+        const auto old = util::read_file(path);
+        if ((!old && fs::exists(path)) || !books_[i].save(path)) { ok = false; break; }
+        previous.emplace_back(path, old);
         index += "    <book";
         put(index, "name", books_[i].name());
         put(index, "file", name);
         index += " />\n";
     }
     index += "  </book_list>\n</addressbook>\n";
-    return util::write_file(directory / index_name, index) && ok;
+    if (ok && util::write_file(directory / index_name, index, true)) return true;
+    for (const auto &[path, bytes] : previous) {
+        if (bytes) {
+            if (!util::write_file(path, *bytes, true))
+                throw std::runtime_error("Address book save failed; could not restore " + path.string());
+        } else {
+            std::error_code error;
+            fs::remove(path, error);
+            if (error) throw std::runtime_error("Address book save failed; could not remove " + path.string());
+        }
+    }
+    return false;
 }
 
 book &book_list::primary() {

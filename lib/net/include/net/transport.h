@@ -93,7 +93,7 @@ public:
     //      Throws net_error at end of stream, or past 8 MiB, so a server
     //      that never sends a newline cannot exhaust memory.
     //
-    std::string read_line();
+    std::string read_line(bool log = true);
 
     // Read exactly size bytes.
     std::string read_bytes(std::size_t size);

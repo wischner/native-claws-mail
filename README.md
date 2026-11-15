@@ -42,9 +42,9 @@ compiler, headers or `../native` checkout:
   Dockerfile builds a new image. `DOCKER_IMAGE=...` uses another image.
 - **Native.** [Native](https://github.com/wischner/native) is fetched into
   `build/deps/native` at the commit pinned in `scripts/build/fetch_native.sh`.
-  The pin is the Native v1.0.5 release, which includes the toolbar-control,
-  separator and pane-chrome fixes. The fetch script still applies any patch
-  placed in `scripts/build/patches/`; there are none at this pin. See
+  The pin is Native commit `426a42f`, which adds explicit tab traversal and
+  themed form heights on top of the v1.0.5 toolbar and pane fixes. The fetch
+  script still applies any patch placed in `scripts/build/patches/`; there are none at this pin. See
   [Native integration](docs/notes/NATIVE-CHANGES.md).
   `NATIVE_REF=<commit, tag or branch> make` builds another revision;
   `NATIVE_ROOT=/path/to/native make` builds against your own checkout.
@@ -77,8 +77,22 @@ The binaries link the image's Ubuntu 22.04 libraries. To run them outside Docker
 the host needs the same libraries (SDL2, SDL2_ttf, OpenSSL 3); the zip from
 `make dist` lists them.
 
-Mail lives in `~/Mail` and settings in `~/.blaise`; `--mail` and `--config` move
-them.
+Settings default to `$XDG_CONFIG_HOME/blaise` (`~/.config/blaise`). New mail
+stores, address books and POP3 receipt history use `$XDG_DATA_HOME/blaise`
+(`~/.local/share/blaise`); IMAP caches use `$XDG_CACHE_HOME/blaise`
+(`~/.cache/blaise`). An existing `~/Mail` and paths in `folderlist.xml` remain
+in use. Relative or empty XDG variables use the standard fallback.
+
+On first use, an existing `~/.blaise` is copied into the new configuration
+location if that location does not exist. Originals are retained; an existing
+XDG profile takes precedence. Address books and POP3 receipt history are copied
+to the data location, and disposable IMAP caches are rebuilt.
+
+`--mail` overrides the mail store. `--config` selects an explicit, self-contained
+profile, retaining the existing address-book/cache conventions within that
+chosen directory. The Network Log is a bounded, in-memory session log; no log
+files or system-directory writes are required. See the
+[dialog and persistence review](docs/notes/DIALOG-REVIEW.md) for validation and limits.
 
 To move from Claws Mail, copy the configuration; the mail stays where it is:
 

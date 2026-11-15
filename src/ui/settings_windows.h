@@ -38,6 +38,7 @@ public:
 
 protected:
     void populate() override;
+    int layout() override;
     void prepare() override;
     bool accept() override;
 
@@ -70,6 +71,7 @@ public:
 
 protected:
     void populate() override;
+    int layout() override;
     void prepare() override;
     bool accept() override;
 
@@ -105,7 +107,7 @@ public:
     //      changed     - Runs after an edit, to save.
     //
     address_window(native::app_wnd &owner, addr::book_list &books,
-                   std::function<void()> changed);
+                   std::function<bool()> changed);
 
     // Show the window.
     void open();
@@ -122,7 +124,7 @@ private:
     void place_children();
 
     addr::book_list &books_;
-    std::function<void()> changed_;
+    std::function<bool()> changed_;
     native::list rows_;
     native::text_edit name_;
     native::text_edit email_;

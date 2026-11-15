@@ -18,6 +18,8 @@
 
 #include "mime/address.h"
 #include "util/codec.h"
+#include "util/files.h"
+#include <stdexcept>
 #include "util/text.h"
 
 namespace prefs {
@@ -38,7 +40,8 @@ std::string secret_key(int id, bool smtp) {
 
 // The port pair Claws stores: a set flag and a value.
 int read_port(const rc_section &from, const char *flag, const char *key) {
-    return from.get_bool(flag) ? from.get_int(key) : 0;
+    const int port = from.get_bool(flag) ? from.get_int(key) : 0;
+    return port >= 0 && port <= 65535 ? port : 0;
 }
 
 // Write a port pair.
@@ -122,6 +125,10 @@ account read_account(const rc_section &from, int id) {
         read_folder(from, "set_trash_folder", "trash_folder");
     value.accept_invalid_certificate =
         from.get_bool("blaise_accept_invalid_certificate");
+    if (value.receive_security < security::none || value.receive_security > security::starttls)
+        value.receive_security = security::tls;
+    if (value.smtp_security < security::none || value.smtp_security > security::starttls)
+        value.smtp_security = security::starttls;
     return value;
 }
 
@@ -252,8 +259,21 @@ bool account_list::save(const fs::path &directory) {
     rc_section &block = secrets.section("Passwords");
     for (const auto &[key, value] : passwords_)
         block.set(key, util::base64_encode(value));
-    const bool wrote_accounts = file_.save(directory / account_file);
-    return secrets.save(directory / password_file, true) && wrote_accounts;
+    const auto account_path = directory / account_file;
+    const auto previous = util::read_file(account_path);
+    if (!previous && fs::exists(account_path)) return false;
+    if (!file_.save(account_path)) return false;
+    if (secrets.save(directory / password_file, true)) return true;
+    // Keep the previous account settings if the companion password write fails.
+    if (previous) {
+        if (!util::write_file(account_path, *previous, true))
+            throw std::runtime_error("Password save failed; could not restore " + account_path.string());
+    } else {
+        std::error_code error;
+        fs::remove(account_path, error);
+        if (error) throw std::runtime_error("Password save failed; could not remove " + account_path.string());
+    }
+    return false;
 }
 
 const account *account_list::find(int id) const {

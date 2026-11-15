@@ -8,6 +8,7 @@
 //
 
 #include "compose_window.h"
+#include "form_window.h"
 
 #include <algorithm>
 #include <array>
@@ -21,7 +22,7 @@ namespace ui {
 namespace {
 
 constexpr int label_width = 64;
-constexpr int row_height = 28;
+
 constexpr int margin = 8;
 constexpr int files_height = 56;
 
@@ -80,14 +81,12 @@ compose_window::compose_window(native::app_wnd &owner, app::engine &core,
       books_(books), accounts_(core.accounts()), draft_(std::move(text)),
       closed_(std::move(closed)),
       from_(account_labels(accounts_),
-            native::combo_box_style::drop_down_list, 0, 0, 600, 24),
-      to_({}, native::combo_box_style::editable, 0, 0, 600, 24),
-      cc_({}, native::combo_box_style::editable, 0, 0, 600, 24),
-      bcc_("", native::text_edit_mode::single_line, 0, 0, 600, 24),
-      subject_("", native::text_edit_mode::single_line, 0, 0, 600, 24),
-      body_("", 0, 0, 600, 300), files_({}, 0, 0, 600, files_height),
+            native::combo_box_style::drop_down_list),
+      to_({}, native::combo_box_style::editable),
+      cc_({}, native::combo_box_style::editable),
       toolbar_(*this), status_(*this),
       attach_dialog_(*this, "Attach File") {
+    tab_sequence({&from_, &to_, &cc_, &bcc_, &subject_, &body_, &files_});
     build_toolbar();
     body_.set_show_line_numbers(false);
     attach_dialog_.add_filter({"All files", {"*"}});
@@ -193,9 +192,9 @@ compose_window::compose_window(native::app_wnd &owner, app::engine &core,
             event.g.draw_text(
                 label,
                 native::rect(margin, static_cast<native::coord>(y),
-                             label_width, 24),
+                             label_width, form_control_height(*this)),
                 layout);
-            y += row_height;
+            y += form_control_height(*this) + 8;
         }
         return true;
     });
@@ -227,10 +226,11 @@ void compose_window::place_children() {
              &from_, &to_, &cc_, &bcc_, &subject_}) {
         field->set_bounds(native::rect(static_cast<native::coord>(x),
                                        static_cast<native::coord>(y),
-                                       static_cast<native::dim>(width), 24));
-        y += row_height;
+                                       static_cast<native::dim>(width), form_control_height(*this)));
+        y += form_control_height(*this) + 8;
     }
     const bool has_files = !draft_.attachments.empty();
+    files_.set_tab_order(has_files ? 7 : 0);
     const int bottom = client.p.y + static_cast<int>(client.d.h) - margin;
     const int body_bottom =
         has_files ? bottom - files_height - margin : bottom;

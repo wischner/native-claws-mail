@@ -37,6 +37,13 @@ std::optional<std::string> read_file(const std::filesystem::path &path);
 bool write_file(const std::filesystem::path &path, std::string_view data,
                 bool owner_only = false);
 
+// Create missing directories owner-only; never change existing directory permissions.
+bool ensure_private_directory(const std::filesystem::path &path);
+
+// Resolve an absolute XDG base, ignoring relative/empty values as required by XDG.
+std::filesystem::path user_directory(const char *variable,
+                                     const std::filesystem::path &fallback);
+
 // Return the user's home directory.
 std::filesystem::path home_directory();
 

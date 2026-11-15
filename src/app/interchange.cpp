@@ -53,22 +53,29 @@ bool engine::import_claws(const fs::path &claws_directory,
     if (!fs::is_directory(claws_directory, error) ||
         fs::exists(config / "accountrc", error))
         return false;
-    fs::create_directories(config, error);
+    if (error || !util::ensure_private_directory(config)) return false;
     bool any = false;
-    for (const char *name : {"accountrc", "folderlist.xml"})
-        if (fs::exists(claws_directory / name, error)) {
-            fs::copy_file(claws_directory / name, config / name, error);
-            any |= !error;
-        }
-    if (fs::exists(claws_directory / "matcherrc", error))
-        fs::copy_file(claws_directory / "matcherrc", config / "matcherrc",
-                      error);
+    const auto copy = [&](const fs::path &source, const fs::path &target) {
+        const auto bytes = util::read_file(source);
+        return bytes && util::write_file(target, *bytes, true);
+    };
     const fs::path books = claws_directory / "addrbook";
     if (fs::is_directory(books, error)) {
-        fs::copy(books, config / "addrbook",
-                 fs::copy_options::recursive |
-                     fs::copy_options::skip_existing,
-                 error);
+        for (const auto &entry : fs::directory_iterator(books, error)) {
+            if (!entry.is_regular_file(error) || error) return false;
+            const auto target = config / "addrbook" / entry.path().filename();
+            if (!fs::exists(target, error) && !copy(entry.path(), target)) return false;
+            if (error) return false;
+        }
+    }
+    if (error) return false;
+    // Publish accounts last, so a failed import can be retried.
+    for (const char *name : {"matcherrc", "folderlist.xml", "accountrc"}) {
+        if (fs::exists(claws_directory / name, error)) {
+            if (!copy(claws_directory / name, config / name)) return false;
+            if (std::string_view(name) != "matcherrc") any = true;
+        }
+        if (error) return false;
     }
     return any;
 }

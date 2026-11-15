@@ -102,8 +102,8 @@ older server can reintroduce menu or startup failures.
 
 ### GEM toolbar consistency
 
-Blaise pins the Native v1.0.5 release,
-`3184fd615d67bb27cdacc09e6a30b4c0123fa891`, in
+Blaise now pins the edit-form revision,
+`426a42f0f6077580dc2234d0adca8bafdba3e041`, in
 `scripts/build/fetch_native.sh`. Normal Make, CMake and VS Code builds fetch
 this revision automatically; no `NATIVE_ROOT` override is required. A custom
 Native checkout must include the shared toolbar and standard-icon APIs.
@@ -206,3 +206,18 @@ The controls below were already provided by Native and remain in use:
   `code_edit` bold treatment without substituting a different font.
 - **No application timer.** Automatic mail checks use a `std::jthread` that posts
   through `app::post`.
+
+## Dialog integration (2026-11-15)
+
+The pin now includes Native's `vision_edit_form.cpp`, explicit `set_tab_order`,
+`focus()` and Enter-as-Tab, and the GEM standalone `form_control_height` metric.
+Blaise uses the sample's pattern of resolving metrics after creation, laying out
+fields by rows, aligning painted captions, and assigning positive tab orders.
+On backends without a standalone form metric it uses `defaults().text_edit_height`:
+Native constrains single-line controls to that exact height. Toolbar-hosted
+inputs keep their separate compact geometry.
+
+All eight application-owned secondary window types were reviewed and updated;
+see [the implementation and validation report](DIALOG-REVIEW.md). Native-owned
+file choosers and message boxes retain their library layouts. No dependency
+patches or sibling-checkout overrides are required.

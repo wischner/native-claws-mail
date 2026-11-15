@@ -76,7 +76,7 @@ public:
 
     // Write the file atomically; returns whether it succeeded.
     bool save(const std::filesystem::path &path,
-              bool owner_only = false) const;
+              bool owner_only = true) const;
 
     // Return a section by label, creating it at the end when absent.
     rc_section &section(std::string_view label);

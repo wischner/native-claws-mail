@@ -57,7 +57,7 @@ public:
 
 private:
     std::string command(std::string_view line, bool secret = false);
-    std::vector<std::string> read_multiline();
+    std::vector<std::string> read_multiline(bool log = true);
 
     line_stream stream_;
     std::string apop_stamp_;

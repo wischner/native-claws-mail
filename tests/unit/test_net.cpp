@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #include "check.h"
+#include "util/log.h"
 #include "fake_server.h"
 #include "mail/imap_folder.h"
 #include "net/imap_client.h"
@@ -121,6 +122,7 @@ void test_smtp() {
 }
 
 void test_pop3() {
+    util::log_clear();
     {
         fake_pop3 server({"Subject: a\r\n\r\n.dot\r\n", "Subject: b\r\n\r\n"});
         net::pop3_client client(plain_target(), connect_to(server));
@@ -129,6 +131,11 @@ void test_pop3() {
         CHECK(entries.size() == 2);
         CHECK(entries[1].uid == "uid2");
         CHECK(client.retrieve(1) == "Subject: a\r\n\r\n.dot\r\n");
+        for (const auto &line : util::log_snapshot()) {
+            CHECK(line.text.find("Subject: a") == std::string::npos);
+            CHECK(line.text.find(".dot") == std::string::npos);
+            CHECK(line.text.find("secret") == std::string::npos);
+        }
         client.remove(1);
         client.quit();
         CHECK(server.deleted.contains(1));

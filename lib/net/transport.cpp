@@ -40,7 +40,7 @@ bool line_stream::fill() {
     return true;
 }
 
-std::string line_stream::read_line() {
+std::string line_stream::read_line(bool log) {
     std::size_t scanned = position_;
     while (true) {
         const std::size_t end = buffer_.find('\n', scanned);
@@ -50,7 +50,7 @@ std::string line_stream::read_line() {
                 --stop;
             std::string line = buffer_.substr(position_, stop - position_);
             position_ = end + 1;
-            util::log_write(util::log_level::received, for_log(line));
+            if (log) util::log_write(util::log_level::received, for_log(line));
             return line;
         }
         if (buffer_.size() - position_ > max_line)

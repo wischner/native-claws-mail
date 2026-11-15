@@ -34,6 +34,7 @@ public:
 
 protected:
     void populate() override;
+    int layout() override;
     void prepare() override;
     bool accept() override;
 

@@ -397,6 +397,17 @@ void test_imap_account(const fs::path &base) {
     offline.load();
     CHECK(!down.failures.empty());
     CHECK(down.find("#mh/Mailbox/inbox") != nullptr);
+
+    // Protocol edits remove the old IMAP store immediately and after restart.
+    auto changed = again.accounts();
+    changed.all().front().kind = prefs::protocol::none;
+    again.set_accounts(changed);
+    CHECK(fresh.find("#imap/work/INBOX") == nullptr);
+    recorder changed_listener;
+    app::engine changed_engine(where, jobs, changed_listener, room.connector());
+    changed_engine.load();
+    CHECK(changed_listener.failures.empty());
+    CHECK(changed_listener.find("#imap/work/INBOX") == nullptr);
 }
 
 void test_import(const fs::path &base) {

@@ -17,7 +17,13 @@
 
 #include <native.h>
 
+class desktop_test;
+
 namespace ui {
+
+// Native edit-form metrics, resolved after the window is created.
+int form_control_height(native::wnd &window);
+void tab_sequence(std::initializer_list<native::wnd *> controls);
 
 // A modal dialog with captions and an OK and Cancel pair.
 class form_window : public native::modal_wnd {
@@ -49,6 +55,12 @@ protected:
     // Create the children, once, on first open.
     virtual void populate() = 0;
 
+    // Lay out content using the current Native form metrics.
+    virtual int layout() = 0;
+    int field_height() { return form_control_height(*this); }
+    int row_y(int row) { return 12 + row * (field_height() + 8); }
+    void caption_bounds(std::size_t index, int x, int y, int width);
+
     // Refresh the children just before showing.
     virtual void prepare() {}
 
@@ -59,17 +71,23 @@ protected:
     native::button cancel_;
 
 private:
+    friend class ::desktop_test;
     // One painted caption.
     struct caption {
         std::string text;
         int x;
         int y;
+        int width = 400;
     };
 
     void finish(bool accepted);
 
     std::vector<caption> captions_;
+    void place_children();
+    std::vector<native::wnd *> controls_;
     bool populated_ = false;
+    bool laying_out_ = false;
+    int minimum_width_;
 };
 
 // Asks for one line of text.
@@ -93,9 +111,11 @@ public:
 
 protected:
     void populate() override;
+    int layout() override;
     bool accept() override;
 
 private:
+    friend class ::desktop_test;
     std::function<void(const std::string &)> done_;
     native::text_edit answer_;
 };
@@ -119,9 +139,11 @@ public:
 
 protected:
     void populate() override;
+    int layout() override;
     bool accept() override;
 
 private:
+    friend class ::desktop_test;
     std::function<void(std::size_t)> done_;
     native::list rows_;
 };

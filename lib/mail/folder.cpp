@@ -26,7 +26,9 @@ folder_item::folder_item(folder &owner, folder_item *parent,
                          std::string item_name, std::string item_path,
                          item_type kind)
     : name(std::move(item_name)), path(std::move(item_path)), type(kind),
-      owner_(&owner), parent_(parent) {}
+      owner_(&owner), parent_(parent) {
+    if (parent) threaded = parent->threaded;
+}
 
 std::string folder_item::identifier() const {
     std::string id = "#";

@@ -10,6 +10,8 @@
 #include "prefs/rc_file.h"
 
 #include <algorithm>
+#include <limits>
+#include <stdexcept>
 
 #include "util/files.h"
 #include "util/text.h"
@@ -63,7 +65,8 @@ std::string rc_section::get(std::string_view key,
 
 int rc_section::get_int(std::string_view key, int fallback) const {
     const auto value = util::parse_int(get(key));
-    return value ? static_cast<int>(*value) : fallback;
+    return value && *value >= std::numeric_limits<int>::min() &&
+        *value <= std::numeric_limits<int>::max() ? static_cast<int>(*value) : fallback;
 }
 
 bool rc_section::get_bool(std::string_view key, bool fallback) const {
@@ -94,6 +97,8 @@ void rc_section::set_bool(std::string_view key, bool value) {
 
 rc_file rc_file::load(const std::filesystem::path &path) {
     const auto text = util::read_file(path);
+    if (!text && std::filesystem::exists(path))
+        throw std::runtime_error("Could not read configuration " + path.string());
     return text ? parse(*text) : rc_file{};
 }
 

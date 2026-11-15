@@ -69,6 +69,7 @@ private:
     void set_message(const std::string &text);
 
     // Engine results.
+    void preferences_changed(const prefs::common &values, bool initial) override;
     void folders_changed(const std::vector<app::folder_node> &tree) override;
     void folder_loaded(const app::folder_view &view) override;
     void status(const std::string &text) override;
@@ -101,7 +102,7 @@ private:
     void export_mailbox();
     void show_about();
     void start_timer();
-    void save_addresses();
+    bool save_addresses();
     std::vector<std::pair<std::string, std::string>> folder_choices() const;
 
     app::options settings_;
@@ -115,6 +116,9 @@ private:
     std::string message_;
     std::string find_text_;
     addr::book_list books_;
+    bool books_loaded_ = false;
+    bool preferences_loaded_ = false;
+    bool closing_ = false;
 
     native::text_edit search_box_;
     native::combo_box show_box_;

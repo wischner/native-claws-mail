@@ -13,10 +13,12 @@
 #include <algorithm>
 #include <cstdlib>
 #include <exception>
+#include <unistd.h>
 
 #include "mail/imap_folder.h"
 #include "mail/mh_folder.h"
 #include "util/files.h"
+#include "util/codec.h"
 #include "util/log.h"
 
 namespace app {
@@ -26,6 +28,12 @@ namespace fs = std::filesystem;
 
 constexpr const char *folder_file = "folderlist.xml";
 constexpr const char *rule_file = "matcherrc";
+
+fs::path imap_cache_for(const paths &where, const prefs::account &item) {
+    return where.imap_cache() / ("account-" + std::to_string(item.id) + "-" +
+        util::md5_hex(item.receive_server + "\n" + item.user_id + "\n" +
+                      std::to_string(item.effective_receive_port()) + "\n" + item.imap_directory));
+}
 
 // Return a snapshot of an item and everything under it.
 folder_node snapshot_item(const mail::folder_item &item) {
@@ -74,8 +82,72 @@ mail::imap_settings settings_for(const prefs::account &item,
 } // namespace
 
 paths paths::defaults() {
-    const fs::path home = util::home_directory();
-    return {home / ".blaise", home / "Mail"};
+    const auto data = util::user_directory("XDG_DATA_HOME", ".local/share");
+    const auto old_mail = util::home_directory() / "Mail";
+    return {util::user_directory("XDG_CONFIG_HOME", ".config"),
+            fs::exists(old_mail) ? old_mail : data / "Mail", data,
+            util::user_directory("XDG_CACHE_HOME", ".cache")};
+}
+
+fs::path paths::address_book() const {
+    return (data.empty() ? config : data) / "addrbook";
+}
+
+fs::path paths::imap_cache() const {
+    return (cache.empty() ? config : cache) / "imapcache";
+}
+
+void paths::prepare() const {
+    const auto legacy = util::home_directory() / ".blaise";
+    const auto default_config = util::user_directory("XDG_CONFIG_HOME", ".config");
+    // Copy into a private staging directory; publish only a complete copy.
+    // Existing XDG configurations always take precedence over legacy files.
+    if (config == default_config && !fs::exists(config) && fs::is_directory(legacy)) {
+        if (!util::ensure_private_directory(config.parent_path()))
+            throw std::runtime_error("Cannot create " + config.parent_path().string());
+        auto stage = config;
+        stage += ".migration-" + std::to_string(::getpid());
+        if (fs::exists(stage) || !util::ensure_private_directory(stage))
+            throw std::runtime_error("Cannot stage legacy configuration at " + stage.string());
+        try {
+            for (const auto &entry : fs::directory_iterator(legacy)) {
+                if (entry.path().filename() == "imapcache") continue;
+                fs::copy(entry.path(), stage / entry.path().filename(), fs::copy_options::recursive);
+            }
+            for (const auto &entry : fs::recursive_directory_iterator(stage))
+                fs::permissions(entry.path(), entry.is_directory() ? fs::perms::owner_all :
+                    fs::perms::owner_read | fs::perms::owner_write);
+            fs::rename(stage, config);
+        } catch (...) {
+            std::error_code ignored;
+            fs::remove_all(stage, ignored);
+            throw;
+        }
+    }
+    for (const auto &directory : {config, data, cache})
+        if (!directory.empty() && !util::ensure_private_directory(directory))
+            throw std::runtime_error("Cannot create application directory " + directory.string());
+    // Address books used to live with configuration. Leave the source intact.
+    const auto old_books = config / "addrbook";
+    const auto books = address_book();
+    if (books != old_books && !fs::exists(books) && fs::is_directory(old_books)) {
+        auto stage = books;
+        stage += ".migration-" + std::to_string(::getpid());
+        if (fs::exists(stage) || !util::ensure_private_directory(stage))
+            throw std::runtime_error("Cannot stage address books at " + stage.string());
+        try {
+            for (const auto &entry : fs::directory_iterator(old_books)) {
+                const auto bytes = util::read_file(entry.path());
+                if (!bytes || !util::write_file(stage / entry.path().filename(), *bytes, true))
+                    throw std::runtime_error("Cannot migrate " + entry.path().string());
+            }
+            fs::rename(stage, books);
+        } catch (...) {
+            std::error_code ignored;
+            fs::remove_all(stage, ignored);
+            throw;
+        }
+    }
 }
 
 // Rebuilds the IMAP stores named in folderlist.xml.
@@ -88,7 +160,7 @@ public:
                                          int account_id,
                                          const fs::path &) override {
         const prefs::account *item = owner_.find_account(account_id);
-        if (type != "imap" || item == nullptr)
+        if (type != "imap" || item == nullptr || item->kind != prefs::protocol::imap4)
             return nullptr;
         return owner_.make_imap(name, *item, account_id);
     }
@@ -148,21 +220,24 @@ void engine::publish_folder(mail::folder_item &item) {
 std::unique_ptr<mail::folder>
 engine::make_imap(const std::string &name, const prefs::account &item,
                   int account_id) {
-    const fs::path cache = paths_.config / "imapcache" /
-                           (item.receive_server + "-" + item.user_id);
+    const fs::path cache = imap_cache_for(paths_, item);
     auto store = std::make_unique<mail::imap_folder>(
         name, settings_for(item, accounts_, connect_), cache);
     store->set_account_id(account_id);
+    store->root().threaded = preferences().threaded_by_default;
     return store;
 }
 
 void engine::sync_stores() {
     // Stores whose account has gone.
     std::vector<mail::folder *> orphans;
-    for (const auto &store : folders_.all())
-        if (store->type_name() == "imap" &&
-            find_account(store->account_id()) == nullptr)
+    for (const auto &store : folders_.all()) {
+        if (store->type_name() != "imap") continue;
+        const auto *item = find_account(store->account_id());
+        if (!item || item->kind != prefs::protocol::imap4 ||
+            store->cache_directory(store->root()) != imap_cache_for(paths_, *item))
             orphans.push_back(store.get());
+    }
     for (mail::folder *store : orphans)
         folders_.remove(*store);
     // Accounts with no store yet, and fresh credentials for the others.
@@ -187,21 +262,28 @@ void engine::sync_stores() {
 
 void engine::load() {
     submit([this] {
+        loaded_ = false;
+        paths_.prepare();
         {
             const std::scoped_lock hold(settings_lock_);
             accounts_.load(paths_.config);
             preferences_.load(paths_.config);
         }
+        const auto values = preferences();
         rules_.load(paths_.config / rule_file);
         imap_factory factory(*this);
-        folders_.load(paths_.config / folder_file, &factory);
+        if (!folders_.load(paths_.config / folder_file, &factory) &&
+            fs::exists(paths_.config / folder_file))
+            throw std::runtime_error("Could not load " + (paths_.config / folder_file).string());
         const bool has_local = std::ranges::any_of(
             folders_.all(), [](const auto &store) {
                 return store->type_name() == "mh";
             });
-        if (!has_local)
-            folders_.add(std::make_unique<mail::mh_folder>("Mailbox",
-                                                           paths_.mail));
+        if (!has_local) {
+            auto local = std::make_unique<mail::mh_folder>("Mailbox", paths_.mail);
+            local->for_each([&](mail::folder_item &item) { item.threaded = values.threaded_by_default; });
+            folders_.add(std::move(local));
+        }
         sync_stores();
         publish_tree();
         // Remote trees follow; the local one is already on screen.
@@ -215,16 +297,20 @@ void engine::load() {
             }
         }
         save_folders();
+        loaded_ = true;
+        jobs_.deliver([this, values] { listener_.preferences_changed(values, true); });
         publish_tree();
     });
 }
 
 void engine::save_folders() {
-    folders_.save(paths_.config / folder_file);
+    if (!folders_.save(paths_.config / folder_file))
+        throw std::runtime_error("Could not save " + (paths_.config / folder_file).string());
 }
 
 void engine::shut_down() {
     submit([this] {
+        if (!loaded_) return;
         if (preferences().empty_trash_on_exit)
             for (const auto &store : folders_.all())
                 if (store->type_name() == "mh")
@@ -250,11 +336,12 @@ prefs::account_list engine::accounts() const {
 
 void engine::set_accounts(prefs::account_list list) {
     submit([this, list = std::move(list)]() mutable {
+        if (!loaded_) throw std::runtime_error("Configuration has not finished loading.");
         {
             const std::scoped_lock hold(settings_lock_);
+            if (!list.save(paths_.config))
+                throw std::runtime_error("Could not save accounts in " + paths_.config.string());
             accounts_ = std::move(list);
-            if (!accounts_.save(paths_.config))
-                report("Could not save the accounts.");
         }
         sync_stores();
         for (const auto &store : folders_.all())
@@ -278,10 +365,14 @@ prefs::common engine::preferences() const {
 
 void engine::set_preferences(prefs::common values) {
     submit([this, values = std::move(values)] {
-        const std::scoped_lock hold(settings_lock_);
-        preferences_ = values;
-        if (!preferences_.save(paths_.config))
-            report("Could not save the preferences.");
+        if (!loaded_) throw std::runtime_error("Configuration has not finished loading.");
+        if (!values.save(paths_.config))
+            throw std::runtime_error("Could not save preferences in " + paths_.config.string());
+        {
+            const std::scoped_lock hold(settings_lock_);
+            preferences_ = values;
+        }
+        jobs_.deliver([this, values] { listener_.preferences_changed(values, false); });
     });
 }
 
@@ -292,10 +383,13 @@ std::vector<filter::rule> engine::rules() const {
 
 void engine::set_rules(std::vector<filter::rule> rules) {
     submit([this, rules = std::move(rules)]() mutable {
+        if (!loaded_) throw std::runtime_error("Configuration has not finished loading.");
         const std::scoped_lock hold(settings_lock_);
-        rules_.rules() = std::move(rules);
-        if (!rules_.save(paths_.config / rule_file))
-            report("Could not save the filter rules.");
+        auto candidate = rules_;
+        candidate.rules() = std::move(rules);
+        if (!candidate.save(paths_.config / rule_file))
+            throw std::runtime_error("Could not save filter rules in " + paths_.config.string());
+        rules_ = std::move(candidate);
     });
 }
 
@@ -312,8 +406,16 @@ mail::folder_item *engine::require(const std::string &id) {
 
 void engine::refresh_tree() {
     submit([this] {
+        if (!loaded_) return;
+        std::set<std::string> existing;
         for (const auto &store : folders_.all())
+            store->for_each([&](mail::folder_item &item) { existing.insert(item.identifier()); });
+        for (const auto &store : folders_.all()) {
             store->scan_tree();
+            store->for_each([&](mail::folder_item &item) {
+                if (!existing.contains(item.identifier())) item.threaded = preferences().threaded_by_default;
+            });
+        }
         save_folders();
         publish_tree();
     });
@@ -335,6 +437,7 @@ void engine::set_folder_view(const std::string &id, mail::sort_key sort,
         item->sort = sort;
         item->sort_ascending = ascending;
         item->threaded = threaded;
+        save_folders();
     });
 }
 
@@ -445,8 +548,10 @@ void engine::create_folder(const std::string &parent,
                            const std::string &name) {
     submit([this, parent, name] {
         mail::folder_item *item = require(parent);
-        if (item->owner().create_folder(*item, name) == nullptr)
+        auto *created = item->owner().create_folder(*item, name);
+        if (!created)
             throw std::runtime_error("Could not create folder " + name);
+        created->threaded = preferences().threaded_by_default;
         save_folders();
         publish_tree();
     });

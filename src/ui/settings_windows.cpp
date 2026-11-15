@@ -28,19 +28,13 @@ using native::text_edit_mode;
 preferences_window::preferences_window(
     native::app_wnd &owner, std::function<void(prefs::common)> done)
     : form_window(owner, "Preferences", 440, 380), done_(std::move(done)),
-      auto_check_("Check for mail every", 12, 12, 200, 24),
-      minutes_("", text_edit_mode::single_line, 220, 12, 60, 26),
-      startup_check_("Check for mail on startup", 12, 44, 300, 24),
-      auto_wrap_("Wrap messages at", 12, 76, 200, 24),
-      wrap_("", text_edit_mode::single_line, 220, 76, 60, 26),
-      quote_mark_("", text_edit_mode::single_line, 220, 108, 60, 26),
-      save_sent_("Keep a copy of sent mail", 12, 140, 300, 24),
-      mark_read_("Mark mail read when opened", 12, 172, 300, 24),
-      threaded_("Thread new folders", 12, 204, 300, 24),
-      empty_trash_("Empty the trash on exit", 12, 236, 300, 24) {
-    add_caption("minutes", 288, 12);
-    add_caption("columns", 288, 76);
-    add_caption("Quote mark", 34, 108);
+      auto_check_("Check for mail every"), startup_check_("Check for mail on startup"),
+      auto_wrap_("Wrap messages at"), save_sent_("Keep a copy of sent mail"),
+      mark_read_("Mark mail read when opened"), threaded_("Thread new folders"),
+      empty_trash_("Empty the trash on exit") {
+    add_caption("minutes", 0, 0);
+    add_caption("columns", 0, 0);
+    add_caption("Quote mark", 0, 0);
 }
 
 void preferences_window::populate() {
@@ -49,6 +43,26 @@ void preferences_window::populate() {
              &quote_mark_, &save_sent_, &mark_read_, &threaded_,
              &empty_trash_})
         attach(*child);
+}
+
+int preferences_window::layout() {
+    const int h = field_height();
+    const int x = std::max(220, native::font_t::stock(native::font_role::control)
+        .measure_text("Check for mail every").width + 44);
+    const int width = get_client_bounds().w() - 24;
+    auto_check_.set_bounds(native::rect(12, row_y(0), x - 20, h));
+    minutes_.set_bounds(native::rect(x, row_y(0), 64, h));
+    startup_check_.set_bounds(native::rect(12, row_y(1), width, h));
+    auto_wrap_.set_bounds(native::rect(12, row_y(2), x - 20, h));
+    wrap_.set_bounds(native::rect(x, row_y(2), 64, h));
+    quote_mark_.set_bounds(native::rect(x, row_y(3), 64, h));
+    caption_bounds(0, x + 72, row_y(0), width - x - 60);
+    caption_bounds(1, x + 72, row_y(2), width - x - 60);
+    caption_bounds(2, 34, row_y(3), x - 42);
+    int row = 4;
+    for (auto *field : {&save_sent_, &mark_read_, &threaded_, &empty_trash_})
+        field->set_bounds(native::rect(12, row_y(row++), width, h));
+    return row_y(7) + h;
 }
 
 void preferences_window::edit(prefs::common values) {
@@ -72,9 +86,10 @@ void preferences_window::prepare() {
 bool preferences_window::accept() {
     const auto minutes = util::parse_int(util::trim(minutes_.get_text()));
     const auto wrap = util::parse_int(util::trim(wrap_.get_text()));
-    if (!minutes || *minutes < 1 || !wrap || *wrap < 20) {
+    if (!minutes || *minutes < 1 || *minutes > 10080 ||
+        !wrap || *wrap < 20 || *wrap > 998) {
         native::message_box::show(*this, "Enter whole numbers: at least one "
-                                         "minute and twenty columns.",
+                                         "minute (up to 10080) and 20–998 columns.",
                                   "Preferences",
                                   native::message_box_buttons::ok,
                                   native::message_box_icon::warning);
@@ -102,16 +117,10 @@ filter_window::filter_window(
     native::app_wnd &owner,
     std::function<void(std::vector<filter::rule>)> done)
     : form_window(owner, "Filter Rules", 640, 420), done_(std::move(done)),
-      rows_({}, 12, 12, 616, 240),
-      text_("", text_edit_mode::single_line, 12, 284, 616, 26),
-      add_("Add", 12, 318, 80, 28), replace_("Replace", 98, 318, 80, 28),
-      remove_("Delete", 184, 318, 80, 28), up_("Up", 270, 318, 64, 28),
-      down_("Down", 340, 318, 64, 28) {
-    add_caption("Rule, such as: subject matchcase \"report\" move "
-                "\"#mh/Mailbox/work\"",
-                12, 258);
+      add_("Add"), replace_("Replace"), remove_("Delete"), up_("Up"), down_("Down") {
+    add_caption("Example: subject matchcase \"report\" mark_as_read", 0, 0);
     rows_.on_selection_change.connect([this](int index) {
-        if (index >= 0)
+        if (index >= 0 && static_cast<std::size_t>(index) < rules_.size())
             text_.set_text(
                 rules_[static_cast<std::size_t>(index)].to_string());
         return true;
@@ -142,6 +151,20 @@ void filter_window::populate() {
     for (native::wnd *child : std::initializer_list<native::wnd *>{
              &rows_, &text_, &add_, &replace_, &remove_, &up_, &down_})
         attach(*child);
+}
+
+int filter_window::layout() {
+    const int h = field_height();
+    const int width = get_client_bounds().w() - 24;
+    rows_.set_bounds(native::rect(12, 12, width, 210));
+    caption_bounds(0, 12, 230, width);
+    text_.set_bounds(native::rect(12, 238 + h, width, h));
+    int x = 12;
+    for (auto *button : {&add_, &replace_, &remove_, &up_, &down_}) {
+        button->set_bounds(native::rect(x, 246 + 2 * h, 88, h));
+        x += 96;
+    }
+    return 246 + 3 * h;
 }
 
 void filter_window::edit(std::vector<filter::rule> rules) {
@@ -182,6 +205,9 @@ void filter_window::replace_rule() {
         rules_[static_cast<std::size_t>(index)] = std::move(*parsed);
         show_rows();
         rows_.set_selected_index(index);
+    } else {
+        native::message_box::show(*this, "That rule could not be understood.",
+            "Filter Rules", native::message_box_buttons::ok, native::message_box_icon::warning);
     }
 }
 
@@ -190,6 +216,7 @@ void filter_window::remove_rule() {
     if (index < 0)
         return;
     rules_.erase(rules_.begin() + index);
+    text_.set_text("");
     show_rows();
 }
 
@@ -206,6 +233,18 @@ void filter_window::move_rule(int by) {
 }
 
 bool filter_window::accept() {
+    if (!util::trim(text_.get_text()).empty()) {
+        const auto parsed = filter::parse_rule(text_.get_text());
+        if (!parsed) {
+            native::message_box::show(*this, "That rule could not be understood.",
+                "Filter Rules", native::message_box_buttons::ok, native::message_box_icon::warning);
+            return false;
+        }
+        const int index = rows_.get_selected_index();
+        if (index >= 0 && static_cast<std::size_t>(index) < rules_.size())
+            rules_[static_cast<std::size_t>(index)] = *parsed;
+        else rules_.push_back(*parsed);
+    }
     if (done_) {
         const auto done = done_;
         const auto copy = rules_;
@@ -215,15 +254,16 @@ bool filter_window::accept() {
 }
 
 address_window::address_window(native::app_wnd &owner, addr::book_list &books,
-                               std::function<void()> changed)
+                               std::function<bool()> changed)
     : native::modeless_wnd(owner, "Address Book", 160, 120, 560, 460),
-      books_(books), changed_(std::move(changed)), rows_({}, 12, 12, 536, 300),
-      name_("", text_edit_mode::single_line, 80, 320, 468, 26),
-      email_("", text_edit_mode::single_line, 80, 352, 468, 26),
-      add_("New", 12, 388, 80, 28), save_("Save", 98, 388, 80, 28),
-      remove_("Delete", 184, 388, 80, 28), import_("Import...", 270, 388, 88,
-                                                   28),
+      books_(books), changed_(std::move(changed)),
+      add_("New"), save_("Save"), remove_("Delete"), import_("Import..."),
       import_dialog_(*this, "Import Addresses") {
+    tab_sequence({&rows_, &name_, &email_, &add_, &save_, &remove_, &import_});
+    on_wnd_resize.connect([this](native::size) {
+        if (built_) place_children();
+        return true;
+    });
     import_dialog_.add_filter({"Address files", {"*.ldif", "*.vcf"}});
     import_dialog_.add_filter({"All files", {"*"}});
     import_dialog_.on_modal_close.connect(
@@ -238,8 +278,8 @@ address_window::address_window(native::app_wnd &owner, addr::book_list &books,
         event.g.set_font(native::font_t::stock(native::font_role::control));
         native::text_layout layout;
         layout.vertical = native::text_valign::center;
-        event.g.draw_text("Name", native::rect(12, 320, 64, 24), layout);
-        event.g.draw_text("Address", native::rect(12, 352, 64, 24), layout);
+        event.g.draw_text("Name", native::rect(12, name_.get_bounds().y1(), 80, form_control_height(*this)), layout);
+        event.g.draw_text("Address", native::rect(12, email_.get_bounds().y1(), 80, form_control_height(*this)), layout);
         return true;
     });
     rows_.on_selection_change.connect([this](int) {
@@ -265,8 +305,10 @@ address_window::address_window(native::app_wnd &owner, addr::book_list &books,
 }
 
 void address_window::open() {
-    if (!get_created())
+    if (!get_created()) {
+        built_ = false;
         create();
+    }
     if (!built_) {
         for (native::wnd *child : std::initializer_list<native::wnd *>{
                  &rows_, &name_, &email_, &add_, &save_, &remove_, &import_}) {
@@ -276,10 +318,28 @@ void address_window::open() {
         }
         built_ = true;
     }
+    place_children();
+    name_.set_text("");
+    email_.set_text("");
     show_rows();
     center_to_parent();
     show();
+    rows_.focus();
     invalidate();
+}
+
+void address_window::place_children() {
+    const int h = form_control_height(*this);
+    const int width = get_client_bounds().w() - 24;
+    const int list_height = std::max(100, int(get_client_bounds().h()) - 3 * h - 56);
+    rows_.set_bounds(native::rect(12, 12, width, list_height));
+    name_.set_bounds(native::rect(100, 20 + list_height, width - 88, h));
+    email_.set_bounds(native::rect(100, 28 + list_height + h, width - 88, h));
+    int x = 12;
+    for (auto *button : {&add_, &save_, &remove_, &import_}) {
+        button->set_bounds(native::rect(x, 36 + list_height + 2 * h, 96, h));
+        x += 104;
+    }
 }
 
 void address_window::show_rows() {
@@ -304,6 +364,7 @@ void address_window::show_person() {
 }
 
 void address_window::add_person() {
+    const auto previous = books_;
     addr::person item;
     item.common_name = name_.get_text();
     item.emails.push_back({"", "", email_.get_text(), ""});
@@ -313,10 +374,11 @@ void address_window::add_person() {
     show_rows();
     rows_.set_selected_index(
         static_cast<int>(books_.primary().people().size()) - 1);
-    changed_();
+    if (!changed_()) { books_ = previous; show_rows(); }
 }
 
 void address_window::store_person() {
+    const auto previous = books_;
     const int index = rows_.get_selected_index();
     auto &people = books_.primary().people();
     if (index < 0 || static_cast<std::size_t>(index) >= people.size())
@@ -328,10 +390,11 @@ void address_window::store_person() {
     item.emails.front().address = email_.get_text();
     show_rows();
     rows_.set_selected_index(index);
-    changed_();
+    if (!changed_()) { books_ = previous; show_rows(); }
 }
 
 void address_window::remove_person() {
+    const auto previous = books_;
     const int index = rows_.get_selected_index();
     auto &people = books_.primary().people();
     if (index < 0 || static_cast<std::size_t>(index) >= people.size())
@@ -339,25 +402,30 @@ void address_window::remove_person() {
     books_.primary().remove_person(
         people[static_cast<std::size_t>(index)].uid);
     show_rows();
-    changed_();
+    if (!changed_()) { books_ = previous; show_rows(); }
 }
 
 void address_window::import_file() {
+    const auto previous = books_;
     const std::filesystem::path path = import_dialog_.get_path();
     const auto text = util::read_file(path);
-    if (!text)
+    if (!text) {
+        native::message_box::show(*this, "Could not read " + path.string(),
+            "Import Addresses", native::message_box_buttons::ok, native::message_box_icon::warning);
         return;
+    }
     const bool card = util::iends_with(path.string(), ".vcf");
     for (addr::person &item :
          card ? addr::import_vcard(*text) : addr::import_ldif(*text))
         books_.primary().add(std::move(item));
     show_rows();
-    changed_();
+    if (!changed_()) { books_ = previous; show_rows(); }
 }
 
 log_window::log_window(native::app_wnd &owner)
     : native::modeless_wnd(owner, "Network Log", 140, 100, 640, 420),
-      text_("", 0, 0, 640, 420), bar_(*this, native::window_edge::top, 30) {
+      bar_(*this) {
+    text_.set_tab_order(1);
     text_.set_show_line_numbers(false);
     text_.set_read_only(true);
     native::tool_item clear;
@@ -370,6 +438,7 @@ log_window::log_window(native::app_wnd &owner)
         return true;
     });
     on_wnd_create.connect([this] {
+        bar_.set_extent(native::theme::create(get_gpx())->get_toolbar_height());
         text_.set_parent(this);
         text_.create();
         text_.show();
@@ -409,6 +478,7 @@ void log_window::open() {
     text_.set_text(lines);
     center_to_parent();
     show();
+    text_.focus();
 }
 
 } // namespace ui

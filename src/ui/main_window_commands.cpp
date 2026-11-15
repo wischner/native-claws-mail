@@ -168,14 +168,20 @@ bool main_window::run_message_command(std::string_view command) {
 }
 
 bool main_window::run_tool_command(std::string_view command) {
+    if (!preferences_loaded_ && (command == "accounts" || command == "preferences" || command == "filters")) {
+        failure("Configuration has not finished loading. Check the reported startup error before editing settings.");
+        return true;
+    }
     if (command == "accounts")
         account_window_.edit(core_.accounts());
     else if (command == "preferences")
         preferences_window_.edit(core_.preferences());
     else if (command == "filters")
         filter_window_.edit(core_.rules());
-    else if (command == "addressBook")
-        address_window_.open();
+    else if (command == "addressBook") {
+        if (books_loaded_) address_window_.open();
+        else failure("The address book could not be loaded. Check its files and permissions.");
+    }
     else if (command == "networkLog")
         log_window_.open();
     else if (command == "about")
@@ -213,6 +219,7 @@ void main_window::run(std::string_view command) {
             set_message("Not found");
     } else if (command == "focusSearch") {
         search_box_.set_text("");
+        search_box_.focus();
     } else if (command == "threadView") {
         model_.set_threaded(!model_.threaded());
         summary_.refresh();

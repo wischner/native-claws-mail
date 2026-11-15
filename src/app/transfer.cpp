@@ -23,6 +23,7 @@
 #include "net/pop3_client.h"
 #include "net/smtp_client.h"
 #include "util/files.h"
+#include "util/codec.h"
 #include "util/log.h"
 #include "util/text.h"
 
@@ -67,14 +68,27 @@ void write_uids(const fs::path &file, const std::set<std::string> &uids) {
     const std::string stamp = " 0 " + std::to_string(std::time(nullptr));
     for (const std::string &uid : uids)
         out += uid + stamp + "\n";
-    util::write_file(file, out);
+    if (!util::write_file(file, out, true))
+        throw std::runtime_error("Could not save received-message IDs in " + file.string());
 }
 
 } // namespace
 
 fs::path engine::uid_file(const prefs::account &item) const {
-    return paths_.config / "uidl" /
-           (item.receive_server + "-" + item.user_id);
+    const auto key = item.receive_server + "-" + item.user_id;
+    const auto file = (paths_.data.empty() ? paths_.config : paths_.data) /
+        "uidl" / util::md5_hex(key);
+    // Retain the received-message history: losing it downloads old mail again.
+    const fs::path legacy_name(key);
+    if (legacy_name == legacy_name.filename() && key != "." && key != "..") {
+        const auto legacy = paths_.config / "uidl" / legacy_name;
+        if (!fs::exists(file) && fs::exists(legacy)) {
+            const auto bytes = util::read_file(legacy);
+            if (!bytes || !util::write_file(file, *bytes, true))
+                throw std::runtime_error("Could not migrate " + legacy.string());
+        }
+    }
+    return file;
 }
 
 int engine::deliver_new(mail::folder_item &inbox, const prefs::account &item,

@@ -74,9 +74,11 @@ item_type type_for(const std::string &name) {
 mh_folder::mh_folder(std::string name, fs::path directory)
     : folder(std::move(name)), directory_(std::move(directory)) {
     std::error_code error;
-    fs::create_directories(directory_, error);
+    if (!util::ensure_private_directory(directory_))
+        throw std::runtime_error("Cannot create mail directory " + directory_.string());
     for (const standard_folder &entry : standard_folders)
-        fs::create_directories(directory_ / entry.name, error);
+        if (!util::ensure_private_directory(directory_ / entry.name))
+            throw std::runtime_error("Cannot create mail folder " + (directory_ / entry.name).string());
     scan_tree();
 }
 
@@ -155,7 +157,7 @@ folder_item *mh_folder::create_folder(folder_item &parent,
     std::error_code error;
     if (fs::exists(directory_ / path, error))
         return nullptr;
-    if (!fs::create_directories(directory_ / path, error))
+    if (!util::ensure_private_directory(directory_ / path))
         return nullptr;
     parent.children.push_back(
         std::make_unique<folder_item>(*this, &parent, name, path));

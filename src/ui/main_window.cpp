@@ -131,18 +131,18 @@ main_window::main_window(const app::options &settings)
       preferences_window_(*this,
                           [this](prefs::common values) {
                               core_.set_preferences(std::move(values));
-                              start_timer();
                           }),
       filter_window_(*this,
                      [this](std::vector<filter::rule> rules) {
                          core_.set_rules(std::move(rules));
                      }),
-      address_window_(*this, books_, [this] { save_addresses(); }),
+      address_window_(*this, books_, [this] { return save_addresses(); }),
       log_window_(*this),
       jobs_([](std::function<void()> work) {
           native::app::post(std::move(work));
       }),
       core_(settings.where, jobs_, *this, settings.connect) {
+    tab_sequence({&search_box_, &show_box_, &sort_box_, &folders_, &summary_, &message_pane_});
     // The window frame and toolbar/status rules enclose the outer edges.
     folders_.set_border_sides(native::border_sides::right);
     summary_.set_border_sides(native::border_sides::left |
@@ -177,7 +177,6 @@ main_window::main_window(const app::options &settings)
         split_.create();
         split_.show();
         place_children();
-        books_.load(settings_.where.config / "addrbook");
         core_.load();
         core_.refresh_tree();
         const prefs::account_list accounts = core_.accounts();
@@ -185,7 +184,6 @@ main_window::main_window(const app::options &settings)
             "Blaise\n\nChoose a folder to read mail. To add a mail account, "
             "use Tools, Accounts.\n");
         update_state();
-        start_timer();
         return true;
     });
     on_menu.connect([this](int id) {
@@ -209,6 +207,18 @@ void main_window::request_close() {
             native::message_box_icon::question) !=
             native::message_box_result::yes)
         return;
+    closing_ = true;
+    timer_ = {};
+    // Complete pending saves before taking the geometry snapshot.
+    jobs_.drain();
+    if (preferences_loaded_) {
+        auto values = core_.preferences();
+        values.window_width = get_dimensions().w;
+        values.window_height = get_dimensions().h;
+        values.folder_pane_width = folders_.get_dimensions().w;
+        values.summary_pane_height = summary_.get_dimensions().h;
+        core_.set_preferences(values);
+    }
     core_.shut_down();
     jobs_.drain();
     destroy();
@@ -385,6 +395,24 @@ void main_window::folder_loaded(const app::folder_view &view) {
     update_state();
 }
 
+void main_window::preferences_changed(const prefs::common &values, bool initial) {
+    if (closing_) return;
+    if (initial) {
+        preferences_loaded_ = true;
+        try {
+            books_.load(settings_.where.address_book());
+            books_loaded_ = true;
+        } catch (const std::exception &error) {
+            failure(error.what());
+        }
+        set_dimensions(native::size(values.window_width, values.window_height));
+        split_.set_ratio(float(values.folder_pane_width) / std::max(1, values.window_width));
+        right_.set_ratio(float(values.summary_pane_height) / std::max(1, int(right_.get_dimensions().h)));
+        if (values.check_on_startup) core_.receive_all();
+    }
+    start_timer();
+}
+
 void main_window::status(const std::string &text) { set_message(text); }
 
 void main_window::failure(const std::string &text) {
@@ -399,8 +427,17 @@ void main_window::mail_received(int count) {
         core_.open_folder(folder_id_);
 }
 
-void main_window::save_addresses() {
-    books_.save(settings_.where.config / "addrbook");
+bool main_window::save_addresses() {
+    std::string error = "Could not save address books in " + settings_.where.address_book().string();
+    try {
+        if (books_loaded_ && books_.save(settings_.where.address_book())) return true;
+    } catch (const std::exception &cause) {
+        error += ": " + std::string(cause.what());
+    }
+    failure(error);
+    native::message_box::show(*this, error, "Address Book",
+        native::message_box_buttons::ok, native::message_box_icon::warning);
+    return false;
 }
 
 void main_window::start_timer() {

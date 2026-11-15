@@ -16,15 +16,6 @@
 namespace ui {
 namespace {
 
-constexpr int list_width = 170;
-constexpr int label_x = list_width + 24;
-constexpr int field_x = label_x + 118;
-constexpr int field_width = 290;
-constexpr int row = 31;
-
-// Return the y of a form row.
-constexpr int row_y(int index) { return 12 + index * row; }
-
 // Return the index of a protocol in the combo box. News and local
 // accounts come from Claws and have no row: they show as sending only.
 int protocol_index(prefs::protocol kind) {
@@ -54,53 +45,19 @@ std::string port_text(int port) {
 
 account_window::account_window(native::app_wnd &owner,
                                std::function<void(prefs::account_list)> done)
-    : form_window(owner, "Accounts", 640, 520), done_(std::move(done)),
-      rows_({}, 12, 12, list_width, 380), add_("New", 12, 400, 54, 28),
-      remove_("Delete", 70, 400, 54, 28), default_("Default", 128, 400, 54, 28),
-      name_("", native::text_edit_mode::single_line, field_x, row_y(0),
-            field_width, 26),
-      full_name_("", native::text_edit_mode::single_line, field_x, row_y(1),
-                 field_width, 26),
-      address_("", native::text_edit_mode::single_line, field_x, row_y(2),
-               field_width, 26),
-      protocol_({"IMAP", "POP3", "Send only"},
-                native::combo_box_style::drop_down_list,
-                field_x, row_y(3), 110, 26),
-      server_("", native::text_edit_mode::single_line, field_x, row_y(4),
-              field_width, 26),
-      port_("", native::text_edit_mode::single_line, field_x, row_y(5), 70,
-            26),
-      security_({"None", "TLS", "STARTTLS"},
-                native::combo_box_style::drop_down_list, field_x + 80,
-                row_y(5), 120, 26),
-      user_("", native::text_edit_mode::single_line, field_x, row_y(6),
-            field_width, 26),
-      password_(field_x, row_y(7), field_width, 26),
-      smtp_server_("", native::text_edit_mode::single_line, field_x, row_y(8),
-                   field_width, 26),
-      smtp_port_("", native::text_edit_mode::single_line, field_x, row_y(9),
-                 70, 26),
-      smtp_security_({"None", "TLS", "STARTTLS"},
-                     native::combo_box_style::drop_down_list, field_x + 80,
-                     row_y(9), 120, 26),
-      smtp_auth_("Log in to send", label_x, row_y(10), 180, 24),
-      remove_mail_("Delete from POP3 server", label_x + 190, row_y(10), 230,
-                   24),
-      signature_("", native::text_edit_mode::multi_line, field_x, row_y(11),
-                 field_width, 60) {
-    add_caption("Account name", label_x, row_y(0));
-    add_caption("Full name", label_x, row_y(1));
-    add_caption("Mail address", label_x, row_y(2));
-    add_caption("Protocol", label_x, row_y(3));
-    add_caption("Server", label_x, row_y(4));
-    add_caption("Port, security", label_x, row_y(5));
-    add_caption("User", label_x, row_y(6));
-    add_caption("Password", label_x, row_y(7));
-    add_caption("SMTP server", label_x, row_y(8));
-    add_caption("SMTP port", label_x, row_y(9));
-    add_caption("Signature", label_x, row_y(11));
+    : form_window(owner, "Accounts", 680, 520), done_(std::move(done)),
+      add_("New"), remove_("Delete"), default_("Default"),
+      protocol_({"IMAP", "POP3", "Send only"}, native::combo_box_style::drop_down_list),
+      security_({"None", "TLS", "STARTTLS"}, native::combo_box_style::drop_down_list),
+      smtp_security_({"None", "TLS", "STARTTLS"}, native::combo_box_style::drop_down_list),
+      smtp_auth_("Log in to send"), remove_mail_("Delete from POP3 server"),
+      signature_("", native::text_edit_mode::multi_line) {
+    for (const char *caption : {"Account name", "Full name", "Mail address", "Protocol",
+                               "Server", "Port, security", "User", "Password",
+                               "SMTP server", "SMTP port", "Signature"})
+        add_caption(caption, 0, 0);
     rows_.on_selection_change.connect([this](int index) {
-        select(index);
+        if (!updating_) select(index);
         return true;
     });
     add_.on_click.connect([this] {
@@ -126,6 +83,37 @@ void account_window::populate() {
         attach(*child);
 }
 
+int account_window::layout() {
+    const int h = field_height();
+    const int label = 206;
+    const auto &font = native::font_t::stock(native::font_role::control);
+    const int x = label + std::max(126, font.measure_text("Port, security").width + 12);
+    const int width = std::max(260, int(get_client_bounds().w()) - x - 12);
+    const std::initializer_list<native::wnd *> fields{
+        &name_, &full_name_, &address_, &protocol_, &server_, &port_,
+        &user_, &password_, &smtp_server_, &smtp_port_};
+    int row = 0;
+    for (auto *field : fields) {
+        field->set_bounds(native::rect(x, row_y(row), width, h));
+        caption_bounds(row, label, row_y(row), x - label - 8);
+        ++row;
+    }
+    port_.set_bounds(native::rect(x, row_y(5), 72, h));
+    security_.set_bounds(native::rect(x + 80, row_y(5), width - 80, h));
+    smtp_port_.set_bounds(native::rect(x, row_y(9), 72, h));
+    smtp_security_.set_bounds(native::rect(x + 80, row_y(9), width - 80, h));
+    smtp_auth_.set_bounds(native::rect(label, row_y(10), width + x - label, h));
+    remove_mail_.set_bounds(native::rect(label, row_y(11), width + x - label, h));
+    signature_.set_bounds(native::rect(x, row_y(12), width, 2 * h));
+    caption_bounds(10, label, row_y(12), x - label - 8);
+    const int bottom = row_y(12) + 2 * h;
+    rows_.set_bounds(native::rect(12, 12, 180, bottom - 2 * h - 28));
+    add_.set_bounds(native::rect(12, bottom - 2 * h - 8, 86, h));
+    remove_.set_bounds(native::rect(106, bottom - 2 * h - 8, 86, h));
+    default_.set_bounds(native::rect(12, bottom - h, 180, h));
+    return bottom;
+}
+
 void account_window::edit(prefs::account_list accounts) {
     accounts_ = std::move(accounts);
     current_ = -1;
@@ -144,10 +132,13 @@ void account_window::show_rows() {
                                                       : item.account_name;
         labels.push_back(label + (item.is_default ? " *" : ""));
     }
+    updating_ = true;
     rows_.set_items(std::move(labels));
+    updating_ = false;
 }
 
 void account_window::select(int index) {
+    if (updating_) return;
     store_fields();
     current_ = index;
     updating_ = true;
@@ -195,13 +186,15 @@ void account_window::store_fields() {
                     : chosen == 1 ? prefs::protocol::pop3
                                   : prefs::protocol::none;
     item.receive_server = server_.get_text();
-    item.receive_port = read_port(port_.get_text());
+    item.receive_port = util::trim(port_.get_text()).empty() ? 0 :
+        (read_port(port_.get_text()) ? read_port(port_.get_text()) : -1);
     item.receive_security =
         static_cast<prefs::security>(security_.get_selected_index());
     item.user_id = user_.get_text();
     accounts_.set_password(item.id, false, password_.get_text());
     item.smtp_server = smtp_server_.get_text();
-    item.smtp_port = read_port(smtp_port_.get_text());
+    item.smtp_port = util::trim(smtp_port_.get_text()).empty() ? 0 :
+        (read_port(smtp_port_.get_text()) ? read_port(smtp_port_.get_text()) : -1);
     item.smtp_security =
         static_cast<prefs::security>(smtp_security_.get_selected_index());
     item.use_smtp_auth = smtp_auth_.get_checked();
@@ -242,11 +235,20 @@ void account_window::make_default() {
 }
 
 bool account_window::accept() {
+    for (const auto *field : {&port_, &smtp_port_}) {
+        const auto text = util::trim(field->get_text());
+        if (!text.empty() && read_port(std::string(text)) == 0) {
+            native::message_box::show(*this, "Ports must be blank or between 1 and 65535.",
+                "Accounts", native::message_box_buttons::ok, native::message_box_icon::warning);
+            return false;
+        }
+    }
     store_fields();
     for (const prefs::account &item : accounts_.all())
-        if (item.address.find('@') == std::string::npos) {
+        if (item.address.find('@') == std::string::npos ||
+            item.receive_port < 0 || item.smtp_port < 0) {
             native::message_box::show(
-                *this, "Each account needs a mail address.", "Accounts",
+                *this, "Each account needs a mail address and valid ports.", "Accounts",
                 native::message_box_buttons::ok,
                 native::message_box_icon::warning);
             return false;

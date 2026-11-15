@@ -79,6 +79,15 @@ void common::load(const std::filesystem::path &directory) {
     const rc_file file = rc_file::load(directory / rc_name);
     if (const rc_section *block = file.find(section_name))
         visit_fields(*this, field_reader{*block});
+    const common defaults;
+    if (check_minutes < 1 || check_minutes > 10080) check_minutes = defaults.check_minutes;
+    if (wrap_length < 20 || wrap_length > 998) wrap_length = defaults.wrap_length;
+    if (window_width < 640 || window_width > 16384) window_width = defaults.window_width;
+    if (window_height < 400 || window_height > 16384) window_height = defaults.window_height;
+    if (folder_pane_width < 120 || folder_pane_width > window_width - 300)
+        folder_pane_width = defaults.folder_pane_width;
+    if (summary_pane_height < 80 || summary_pane_height > window_height - 160)
+        summary_pane_height = defaults.summary_pane_height;
 }
 
 bool common::save(const std::filesystem::path &directory) const {

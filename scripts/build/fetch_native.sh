@@ -7,10 +7,10 @@
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 url=${NATIVE_URL:-https://github.com/wischner/native.git}
-# Native v1.0.5: includes password_edit, tab_strip, shared toolbar metrics,
-# GEM stock icons, hosted-control fill, separator lengths and pane chrome;
+# Native edit-form revision: explicit tab traversal, themed form heights,
+# plus the v1.0.5 toolbar and pane chrome fixes;
 # see docs/notes/NATIVE-CHANGES.md.
-ref=${NATIVE_REF:-3184fd615d67bb27cdacc09e6a30b4c0123fa891}
+ref=${NATIVE_REF:-426a42f0f6077580dc2234d0adca8bafdba3e041}
 dest="$root/build/deps/native"
 stamp="$root/build/deps/native.ref"
 # Carry shared chrome fixes until they are in the pinned release.

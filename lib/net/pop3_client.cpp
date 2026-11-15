@@ -40,10 +40,10 @@ std::string pop3_client::command(std::string_view line, bool secret) {
     return reply;
 }
 
-std::vector<std::string> pop3_client::read_multiline() {
+std::vector<std::string> pop3_client::read_multiline(bool log) {
     std::vector<std::string> lines;
     while (true) {
-        std::string line = stream_.read_line();
+        std::string line = stream_.read_line(log);
         if (line == ".")
             return lines;
         if (line.starts_with('.'))
@@ -109,7 +109,7 @@ std::vector<pop3_entry> pop3_client::list() {
 std::string pop3_client::retrieve(int number) {
     command("RETR " + std::to_string(number));
     std::string message;
-    for (const std::string &line : read_multiline()) {
+    for (const std::string &line : read_multiline(false)) {
         message += line;
         message += "\r\n";
     }

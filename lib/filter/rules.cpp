@@ -9,6 +9,8 @@
 
 #include "filter/rules.h"
 
+#include <stdexcept>
+
 #include <array>
 
 #include "util/files.h"
@@ -214,8 +216,11 @@ void rule_set::load(const std::filesystem::path &path) {
     rules_.clear();
     other_sections_.clear();
     const auto text = util::read_file(path);
-    if (!text)
+    if (!text) {
+        if (std::filesystem::exists(path))
+            throw std::runtime_error("Could not read filter rules " + path.string());
         return;
+    }
     bool in_filtering = false;
     for (const std::string &line : util::split_lines(*text)) {
         if (line.starts_with('[') && line.ends_with(']')) {

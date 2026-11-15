@@ -236,6 +236,7 @@ void main_window::open_compose(compose::draft text) {
     window->create();
     window->center_to_parent();
     window->show();
+    window->on_native_tab({native::key_code::tab, native::key_action::press});
     composers_.push_back(std::move(window));
 }
 

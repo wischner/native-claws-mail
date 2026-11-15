@@ -420,6 +420,10 @@ private:
             CHECK(window_.composers_.size() == 1);
             ui::compose_window &compose = *window_.composers_.front();
             CHECK(compose.get_created());
+            CHECK(compose.from_.get_tab_order() == 1 && compose.body_.get_tab_order() == 6);
+            CHECK(compose.files_.get_tab_order() == 0);
+            CHECK(compose.to_.get_bounds().h() >= ui::form_control_height(compose));
+            CHECK(compose.to_.get_bounds().y1() >= compose.from_.get_bounds().y2());
             const auto &tools = compose.toolbar_.get_items();
             const int button_width =
                 compose.toolbar_.get_item_bounds(tools.front().id).w();
@@ -431,6 +435,9 @@ private:
             CHECK(text.subject == "Re: First");
             CHECK(compose.body_.get_text().find("> Hello from") !=
                   std::string::npos);
+        });
+        act("send reply", [this] {
+            auto &compose = *window_.composers_.front();
             compose.body_.insert(0, "Thanks.\n");
             compose.send();
         });
@@ -520,10 +527,32 @@ private:
         });
     }
 
+    void check_form(ui::form_window &dialog) {
+        const auto area = dialog.get_client_bounds();
+        unsigned order = 0;
+        for (auto *control : dialog.controls_) {
+            CHECK(control->get_tab_order() == ++order);
+            const auto box = control->get_bounds();
+            CHECK(box.x1() >= area.x1() && box.y1() >= area.y1());
+            CHECK(box.x2() <= area.x2() && box.y2() <= area.y2());
+            CHECK(box.h() >= ui::form_control_height(dialog));
+            CHECK(control->on_native_tab({key_code::tab, native::key_action::press}));
+            CHECK(control->on_native_tab({key_code::tab, native::key_action::press,
+                                          false, native::key_modifiers::shift}));
+            for (auto *other : dialog.controls_) {
+                if (other == control) continue;
+                const auto next = other->get_bounds();
+                CHECK(box.x2() <= next.x1() || next.x2() <= box.x1() ||
+                      box.y2() <= next.y1() || next.y2() <= box.y1());
+            }
+        }
+    }
+
     void test_settings() {
         act("accounts", [this] {
             ui::account_window &dialog = window_.account_window_;
             window_.run("accounts");
+            check_form(dialog);
             CHECK(dialog.rows_.get_items().size() == 1);
             CHECK(dialog.address_.get_text() == "me@x.org");
             CHECK(dialog.protocol_.get_selected_index() == 1);
@@ -534,34 +563,91 @@ private:
             dialog.remove_account();
             CHECK(dialog.rows_.get_items().size() == 1);
             CHECK(dialog.accept());
-            dialog.close(native::dialog_result::cancelled);
+
         });
         settle("accounts stored");
         wait("password kept", [this] {
             return window_.core_.accounts().password(1, false) == "s3cret";
         });
         act("preferences", [this] {
+            window_.account_window_.close(native::dialog_result::cancelled);
             ui::preferences_window &dialog = window_.preferences_window_;
             window_.run("preferences");
+            check_form(dialog);
             CHECK(dialog.wrap_.get_text() == "72");
             dialog.wrap_.set_text("66");
+            dialog.auto_check_.set_checked(true);
+            dialog.minutes_.set_text("17");
             CHECK(dialog.accept());
-            dialog.close(native::dialog_result::cancelled);
+
         });
+        if (std::getenv("BLAISE_TEST_KEYBOARD")) {
+            wait("physical Tab and Shift+Tab", [this] {
+                auto &dialog = window_.preferences_window_;
+                return dialog.wrap_.get_text() == "77" && dialog.minutes_.get_text() == "19";
+            });
+            act("keyboard values checked", [this] {
+                auto &dialog = window_.preferences_window_;
+                CHECK(dialog.wrap_.get_text() == "77" && dialog.minutes_.get_text() == "19");
+                dialog.wrap_.set_text("66");
+                dialog.minutes_.set_text("17");
+            });
+        }
         wait("preferences kept", [this] {
-            return window_.core_.preferences().wrap_length == 66;
+            return window_.core_.preferences().wrap_length == 66 && window_.timer_.joinable();
         });
         act("filters", [this] {
+            window_.preferences_window_.close(native::dialog_result::cancelled);
             ui::filter_window &dialog = window_.filter_window_;
             window_.run("filters");
+            check_form(dialog);
             dialog.text_.set_text("subject matchcase \"x\" mark");
             dialog.add_rule();
             CHECK(dialog.rows_.get_items().size() == 1);
             CHECK(dialog.accept());
-            dialog.close(native::dialog_result::cancelled);
+
         });
         wait("filters kept",
              [this] { return window_.core_.rules().size() == 1; });
+        act("cancel and reopen", [this] {
+            window_.filter_window_.close(native::dialog_result::cancelled);
+            prefs::common persisted;
+            persisted.load(home_ / "cfg");
+            CHECK(persisted.wrap_length == 66 && persisted.check_minutes == 17);
+            prefs::account_list accounts;
+            accounts.load(home_ / "cfg");
+            CHECK(accounts.password(1, false) == "s3cret");
+            auto &preferences = window_.preferences_window_;
+            window_.run("preferences");
+            preferences.wrap_.set_text("99");
+            preferences.cancel_.on_click.emit();
+            window_.run("preferences");
+            CHECK(preferences.wrap_.get_text() == "66");
+            preferences.cancel_.on_click.emit();
+            auto &account = window_.account_window_;
+            window_.run("accounts");
+            account.address_.set_text("discard@example.org");
+            account.cancel_.on_click.emit();
+            window_.run("accounts");
+            CHECK(account.address_.get_text() == "me@x.org");
+            account.cancel_.on_click.emit();
+            auto &filter = window_.filter_window_;
+            window_.run("filters");
+            filter.text_.set_text("subject matchcase \"discard\" mark");
+            filter.add_rule();
+            filter.cancel_.on_click.emit();
+            window_.run("filters");
+            CHECK(filter.rows_.get_items().size() == 1);
+            filter.cancel_.on_click.emit();
+            window_.input_.ask("Find", "Text to find", "hello", [](const auto &) {});
+            check_form(window_.input_);
+        });
+        act("choice dialog", [this] {
+            window_.input_.cancel_.on_click.emit();
+            window_.choice_.ask("Move to Folder", {"Inbox", "Sent"}, [](auto) {});
+            check_form(window_.choice_);
+        });
+        act("close choice", [this] { window_.choice_.cancel_.on_click.emit(); });
         act("address book", [this] {
             ui::address_window &dialog = window_.address_window_;
             window_.run("addressBook");
@@ -571,11 +657,22 @@ private:
             CHECK(dialog.rows_.get_items().size() == 1);
             CHECK(fs::exists(home_ / "cfg/addrbook/addrbook--index.xml"));
             CHECK(window_.books_.complete("ana").size() == 1);
+        });
+        act("address reopen", [this] {
+            auto &dialog = window_.address_window_;
+            dialog.name_.set_text("discard");
             dialog.destroy();
+            window_.run("addressBook");
+            CHECK(dialog.name_.get_created());
+            CHECK(dialog.name_.get_text() != "discard");
+            CHECK(dialog.rows_.get_items().size() == 1);
+        });
+        act("network log", [this] {
+            window_.address_window_.destroy();
             window_.run("networkLog");
             CHECK(window_.log_window_.get_created());
-            window_.log_window_.destroy();
         });
+        act("close network log", [this] { window_.log_window_.destroy(); });
     }
 
     void test_every_command() {
@@ -628,7 +725,8 @@ int program(int, char **) {
                 std::atomic<bool> busy{false};
                 while (!stop.stop_requested()) {
                     std::this_thread::sleep_for(
-                        std::chrono::milliseconds(5));
+                        std::chrono::milliseconds(std::getenv("BLAISE_TEST_STEP_MS")
+                            ? std::clamp(std::atoi(std::getenv("BLAISE_TEST_STEP_MS")), 5, 2000) : 5));
                     if (busy.exchange(true))
                         continue;
                     native::app::post([&] {

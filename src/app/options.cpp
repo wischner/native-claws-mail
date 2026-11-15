@@ -86,8 +86,12 @@ options parse_options(int argc, char **argv) {
             settings.show_help = true;
         else if (word == "--version" || word == "-v")
             settings.show_version = true;
-        else if (word == "--config")
+        else if (word == "--config") {
             settings.where.config = value();
+            // An explicit profile remains self-contained, as before.
+            settings.where.data.clear();
+            settings.where.cache.clear();
+        }
         else if (word == "--mail")
             settings.where.mail = value();
         else if (word == "--list")
@@ -114,8 +118,8 @@ options parse_options(int argc, char **argv) {
 
 std::string usage_text() {
     return "usage: blaise [options] [message.eml]\n"
-           "  --config DIR        configuration directory (~/.blaise)\n"
-           "  --mail DIR          mail directory (~/Mail)\n"
+           "  --config DIR        configuration directory (XDG_CONFIG_HOME/blaise)\n"
+           "  --mail DIR          mail directory (XDG_DATA_HOME/blaise/Mail; existing ~/Mail kept)\n"
            "  --select ID[:NUM]   open at a folder or message\n"
            "  --list              list folders\n"
            "  --summary FOLDER    list a folder's messages\n"
