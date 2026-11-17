@@ -23,6 +23,39 @@ committed and pushed, so the build fetches them from GitHub.
 
 ## Fixed along the way
 
+- Motif's nested split views could loop indefinitely in Xt geometry negotiation
+  during startup or resizing. `motif-split-layout.patch` applies resolved pane
+  geometry directly, positions the native sashes at the same dividers, and keeps
+  collection scrollbars inside their collection rather than adding extra children
+  to `XmPanedWindow`. Motif's panes use coordinates within the splitter, since
+  this backend has no separate pane host widgets.
+
+- OPEN LOOK rendered all three mail panes at the same frame position because
+  its frame-owned collection panels omitted the offsets of intermediate split
+  pane hosts. `openlook-pane-position-focus.patch` includes those offsets during
+  creation and repositioning. It also focuses the actual child window of an
+  XView multiline Panel item, avoiding a null `xv_set` during account-dialog
+  tab traversal. Both patches live under `scripts/build/patches/` and are applied
+  automatically by the Native dependency fetcher.
+
+  On 2026-11-16 both debug builds passed **1,160/1,160 desktop checks**. Actual
+  CDE and OPEN LOOK Xephyr sessions also displayed the synthetic inbox, opened
+  mail through XTest mouse input, and remained usable after window resizing and
+  divider dragging. The desktop width assertion now compares the allocated pane
+  width, allowing backends with pane-local origins; it no longer incorrectly
+  treats every pane's local right edge as a top-level window coordinate.
+
+- Haiku's virtual table host omitted the child when resolving its parent view.
+  A split view needs that child to choose its first or second pane, so opening
+  Blaise threw `Haiku: collection requires a created parent.` before the main
+  window appeared. `scripts/build/patches/haiku-collection-parent.patch` passes
+  the collection owner to the existing parent resolver. The dependency fetcher
+  applies this fix to the pinned Native revision; the public API is unchanged.
+  On 2026-11-16 the rebuilt debug client fetched all seven fixture messages and
+  reached `native::app::main_loop` under GDB on `hotel`. The desktop scenario
+  completed with 1,151/1,160 checks passing; the remaining nine assertions concern
+  pane width, toolbar height and compose separator width, not startup.
+
 - X11 `split_view`, `panel` and `tab_view` destroyed their widget before their
   children. Outside an Xt dispatch that frees the tree at once, so closing a window
   with nested split views crashed in `XtDestroyWidget`. Isaac found the same fault
@@ -219,5 +252,5 @@ inputs keep their separate compact geometry.
 
 All eight application-owned secondary window types were reviewed and updated;
 see [the implementation and validation report](DIALOG-REVIEW.md). Native-owned
-file choosers and message boxes retain their library layouts. No dependency
-patches or sibling-checkout overrides are required.
+file choosers and message boxes retain their library layouts. The backend fixes
+listed above are carried automatically; no sibling-checkout override is required.

@@ -56,8 +56,19 @@ elif session == 'gemix':
              '-e', f'BLAISE_GEMD={int(item.get("gemd", False))}']
     wrapper = ['bash', str(ROOT / 'scripts/debug/gem-session.sh')]
 if demo_mail:
-    wrapper = ['python3', '-B', str(ROOT / 'scripts/test/demo_mail.py'),
-               '--state', str(ROOT / 'build/uat-mail'),
-               '--client', str(ROOT / 'build/platforms' / backend / 'debug/bin/blaise'),
-               '--'] + wrapper
+    # SDL2's F5 build uses Make; the other profiles use the platform builder.
+    client = (ROOT / 'bin/blaise-debug' if backend == 'linux-sdl2' else
+              ROOT / 'build/platforms' / backend / 'debug/bin/blaise')
+    state = ROOT / 'build/uat-mail'
+    if backend != 'linux-gemix-gemd':
+        state /= backend
+    mailbox = ['python3', '-B', str(ROOT / 'scripts/test/demo_mail.py'),
+               '--state', str(state), '--client', str(client), '--']
+    if session == 'cde-xephyr':
+        # The fixture and debugger must both run as CDE's desktop user.
+        # Starting the fixture outside CDE creates unreadable private files.
+        wrapper = ['bash', str(ROOT / 'scripts/debug/cde-session.sh'),
+                   str(state)] + mailbox
+    else:
+        wrapper = mailbox + wrapper
 os.execvp('docker', args + [item['image']] + wrapper + command)

@@ -35,6 +35,8 @@ def closed(port):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--client', required=True, type=Path)
+    parser.add_argument('--profile', default='GEM, Rasta',
+                        help='F5 profile whose GDB setup and folder arguments to exercise')
     args = parser.parse_args()
     client = args.client.resolve()
     with tempfile.TemporaryDirectory(prefix='demo-mail-check-', dir=ROOT / 'build') as temporary:
@@ -72,7 +74,7 @@ def main():
                 # shell treats an unquoted # as a comment and drops the value.
                 profile = next(p for p in json.loads(
                     (ROOT / '.vscode/launch.json').read_text())['configurations']
-                    if p['name'] == 'GEM, Rasta')
+                    if p['name'] == args.profile)
                 debugger = ['gdb', '--batch', '--return-child-result']
                 for setup in profile.get('setupCommands', []):
                     debugger += ['-ex', setup['text']]

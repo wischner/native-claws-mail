@@ -6,7 +6,14 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/bin/blaise-debug",
-            "args": [],
+            "args": [
+                "--config",
+                "${workspaceFolder}/build/uat-mail/linux-sdl2/config",
+                "--mail",
+                "${workspaceFolder}/build/uat-mail/linux-sdl2/Mail",
+                "--select",
+                "#mh/Mailbox/inbox"
+            ],
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
             "preLaunchTask": "Build SDL2, Local",
@@ -15,18 +22,33 @@
                 "pipeProgram": "python3",
                 "pipeArgs": [
                     "${workspaceFolder}/scripts/debug/linux.py",
-                    "linux-sdl2"
+                    "linux-sdl2",
+                    "--demo-mail"
                 ],
                 "debuggerPath": "/usr/bin/gdb",
                 "pipeCwd": "${workspaceFolder}"
-            }
+            },
+            "setupCommands": [
+                {
+                    "description": "Pass mailbox identifiers beginning with # literally",
+                    "text": "set startup-with-shell off",
+                    "ignoreFailures": false
+                }
+            ]
         },
         {
             "name": "X11, Xephyr",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/platforms/linux-x11/debug/bin/blaise",
-            "args": [],
+            "args": [
+                "--config",
+                "${workspaceFolder}/build/uat-mail/linux-x11/config",
+                "--mail",
+                "${workspaceFolder}/build/uat-mail/linux-x11/Mail",
+                "--select",
+                "#mh/Mailbox/inbox"
+            ],
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
             "preLaunchTask": "Build X11, Xephyr",
@@ -35,18 +57,33 @@
                 "pipeProgram": "python3",
                 "pipeArgs": [
                     "${workspaceFolder}/scripts/debug/linux.py",
-                    "linux-x11"
+                    "linux-x11",
+                    "--demo-mail"
                 ],
                 "debuggerPath": "/usr/bin/gdb",
                 "pipeCwd": "${workspaceFolder}"
-            }
+            },
+            "setupCommands": [
+                {
+                    "description": "Pass mailbox identifiers beginning with # literally",
+                    "text": "set startup-with-shell off",
+                    "ignoreFailures": false
+                }
+            ]
         },
         {
             "name": "Motif, Xephyr",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/platforms/linux-motif/debug/bin/blaise",
-            "args": [],
+            "args": [
+                "--config",
+                "${workspaceFolder}/build/uat-mail/linux-motif/config",
+                "--mail",
+                "${workspaceFolder}/build/uat-mail/linux-motif/Mail",
+                "--select",
+                "#mh/Mailbox/inbox"
+            ],
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
             "preLaunchTask": "Build Motif, Xephyr",
@@ -55,18 +92,33 @@
                 "pipeProgram": "python3",
                 "pipeArgs": [
                     "${workspaceFolder}/scripts/debug/linux.py",
-                    "linux-motif"
+                    "linux-motif",
+                    "--demo-mail"
                 ],
                 "debuggerPath": "/usr/bin/gdb",
                 "pipeCwd": "${workspaceFolder}"
-            }
+            },
+            "setupCommands": [
+                {
+                    "description": "Pass mailbox identifiers beginning with # literally",
+                    "text": "set startup-with-shell off",
+                    "ignoreFailures": false
+                }
+            ]
         },
         {
             "name": "OPEN LOOK, Xephyr",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/platforms/linux-openlook/debug/bin/blaise",
-            "args": [],
+            "args": [
+                "--config",
+                "${workspaceFolder}/build/uat-mail/linux-openlook/config",
+                "--mail",
+                "${workspaceFolder}/build/uat-mail/linux-openlook/Mail",
+                "--select",
+                "#mh/Mailbox/inbox"
+            ],
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
             "preLaunchTask": "Build OPEN LOOK, Xephyr",
@@ -75,18 +127,33 @@
                 "pipeProgram": "python3",
                 "pipeArgs": [
                     "${workspaceFolder}/scripts/debug/linux.py",
-                    "linux-openlook"
+                    "linux-openlook",
+                    "--demo-mail"
                 ],
                 "debuggerPath": "/usr/bin/gdb",
                 "pipeCwd": "${workspaceFolder}"
-            }
+            },
+            "setupCommands": [
+                {
+                    "description": "Pass mailbox identifiers beginning with # literally",
+                    "text": "set startup-with-shell off",
+                    "ignoreFailures": false
+                }
+            ]
         },
         {
             "name": "Window Maker, Xephyr",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/platforms/linux-wmaker/debug/bin/blaise",
-            "args": [],
+            "args": [
+                "--config",
+                "${workspaceFolder}/build/uat-mail/linux-wmaker/config",
+                "--mail",
+                "${workspaceFolder}/build/uat-mail/linux-wmaker/Mail",
+                "--select",
+                "#mh/Mailbox/inbox"
+            ],
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
             "preLaunchTask": "Build Window Maker, Xephyr",
@@ -95,11 +162,19 @@
                 "pipeProgram": "python3",
                 "pipeArgs": [
                     "${workspaceFolder}/scripts/debug/linux.py",
-                    "linux-wmaker"
+                    "linux-wmaker",
+                    "--demo-mail"
                 ],
                 "debuggerPath": "/usr/bin/gdb",
                 "pipeCwd": "${workspaceFolder}"
-            }
+            },
+            "setupCommands": [
+                {
+                    "description": "Pass mailbox identifiers beginning with # literally",
+                    "text": "set startup-with-shell off",
+                    "ignoreFailures": false
+                }
+            ]
         },
         {
             "name": "GEM, Rasta",
@@ -141,7 +216,14 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "/boot/home/Projects/blaise/blaise",
-            "args": [],
+            "args": [
+                "--config",
+                "/boot/home/Projects/blaise/uat-mail/config",
+                "--mail",
+                "/boot/home/Projects/blaise/uat-mail/Mail",
+                "--select",
+                "#mh/Mailbox/inbox"
+            ],
             "cwd": "/boot/home/Projects/blaise",
             "MIMode": "gdb",
             "preLaunchTask": "Deploy Haiku, VM",
@@ -150,10 +232,18 @@
                 "pipeProgram": "python3",
                 "pipeArgs": [
                     "${workspaceFolder}/scripts/debug/remote.py",
-                    "debug-haiku"
+                    "debug-haiku",
+                    "--demo-mail"
                 ],
                 "debuggerPath": "/boot/system/bin/gdb"
-            }
+            },
+            "setupCommands": [
+                {
+                    "description": "Pass mailbox identifiers beginning with # literally",
+                    "text": "set startup-with-shell off",
+                    "ignoreFailures": false
+                }
+            ]
         }
     ]
 }

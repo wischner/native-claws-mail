@@ -195,7 +195,7 @@ private:
             CHECK(window_.status_.get_parts()[2].width == 70);
             // Backends take their menu bar out of this, so only the width
             // is the same everywhere.
-            CHECK(window_.get_bounds().d.w == 1000);
+            CHECK(window_.get_bounds().d.w == prefs::common{}.window_width);
             const auto &tops = window_.menu.tops();
             CHECK(tops.size() == 6);
             CHECK(tops.front().title == "File");
@@ -230,7 +230,9 @@ private:
         const auto panes = window_.split_.get_bounds();
         CHECK(panes.x1() == client.x1() && panes.y1() == client.y1());
         CHECK(panes.x2() == client.x2() && panes.y2() == client.y2());
-        CHECK(window_.right_.get_bounds().x2() == client.w());
+        // Native pane hosts (Haiku, OPEN LOOK) use pane-local origins.
+        CHECK(window_.right_.get_dimensions().w ==
+              window_.split_.get_second_bounds().w());
         CHECK(window_.summary_.get_bounds().x2() == window_.right_.get_bounds().w());
         CHECK(window_.message_pane_.get_bounds().x2() == window_.right_.get_bounds().w());
         CHECK(window_.toolbar_.get_bounds().x2() == client.x2());

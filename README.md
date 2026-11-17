@@ -106,15 +106,20 @@ Accounts. Keep a backup of `~/Mail` the first time.
 **VS Code F5** builds and debugs the selected backend. Profiles are named
 `<name>, <env>`: `SDL2, Local`, `X11, Xephyr`, `GEM, Rasta` and so on.
 
-`GEM, Rasta` starts a Python POP3/SMTP test mailbox with the debugger and
+New windows start at 900 × 600. Restored sizes are limited to the display's
+work area with space for desktop decorations, so they fit smaller Xephyr sessions.
+
+Every F5 profile starts a Python POP3/SMTP test mailbox with the debugger and
 opens an inbox containing seven synthetic messages. It includes a reply thread,
 Unicode text, HTML, a CSV attachment and a long message. Sending captures mail
 locally; **Get Mail** downloads the captured messages back into the test inbox.
 The server stops when the debug session ends, including **Stop**.
 
-This F5-only account and its mail persist under ignored `build/uat-mail/`,
-separate from your normal account. Delete that directory while debugging is
-stopped to reset the samples. Normal builds and distribution packages neither
+This F5-only account and its mail persist separately for each port, under ignored
+`build/uat-mail/<backend>/` on Linux (`build/uat-mail/` for the existing GEM
+mailbox), and `/boot/home/Projects/blaise/uat-mail/` on the Haiku VM. Haiku needs
+Python 3.9 or newer. Delete a port's state directory while debugging is stopped
+to reset its samples. Normal builds and distribution packages neither
 start nor include the test server, account setup or sample mail.
 See [F5 mailbox testing](docs/notes/TESTING.md#f5-test-mailbox) for the test
 workflow, captured messages and debugger troubleshooting.

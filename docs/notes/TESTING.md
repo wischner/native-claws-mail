@@ -72,11 +72,20 @@ input, and modal file choosers are not opened.
 
 ## F5 test mailbox
 
-Select **GEM, Rasta** in VS Code and press **F5**. The existing build task runs
-first. The debug launcher then starts `scripts/test/demo_mail.py` inside the
-GEMIX container, creates an isolated POP3 account and fetches the samples through
-the compiled client before opening the GUI. This requires Docker and an X11 or
-Xwayland desktop, as the Rasta launcher does.
+Select any debug profile in VS Code and press **F5**. The existing build task
+runs first. The debug launcher then starts `scripts/test/demo_mail.py`, creates
+an isolated POP3 account and fetches the samples through that port's compiled
+client before opening the GUI. Linux profiles run the fixture inside their SDK
+container and require Docker and an X11 or Xwayland desktop. SDL2 uses the
+Make-built `bin/blaise-debug`; the other Linux profiles use their platform debug
+builds. Haiku deploys the fixture alongside the client and runs it on the VM,
+which needs Python 3.9 or newer available as `python3`.
+
+CDE starts its desktop services as root, then runs the mailbox helper and GDB
+as its `cde` user. `scripts/debug/cde-session.sh` repairs ownership of the Motif
+demo state left by older launchers before that switch, preserving private file
+modes and existing mail. Running the helper outside CDE leaves private account
+files unreadable to the GUI, which prevents mailbox loading and account dialogs.
 
 The seven initial messages include a reply thread, UTF-8 text, an HTML
 alternative, a CSV attachment and a long body. HTML is shown through Blaise's
@@ -91,7 +100,10 @@ credentials are `demo` / `demo`; the generated account uses plain POP3 and SMTP
 without SMTP authentication. This fixture exercises neither IMAP nor TLS; those
 remain covered by the separate protocol and live-server tests.
 
-State lives under ignored `build/uat-mail/`:
+Each port has its own persistent state. Linux uses ignored
+`build/uat-mail/<backend>/` (for example, `build/uat-mail/linux-x11/`). GEM keeps
+its existing `build/uat-mail/` state. Haiku uses
+`/boot/home/Projects/blaise/uat-mail/` on the VM. Paths within each state directory:
 
 | Path | Contents |
 | --- | --- |
@@ -104,13 +116,14 @@ State lives under ignored `build/uat-mail/`:
 The launcher refreshes the test account's connection settings each time. Mail
 and flags persist, and the normal UID cache prevents duplicate sample downloads.
 Stopping debugging or exiting the debugger stops the fixture's listeners. To
-reset the samples, stop debugging and delete only `build/uat-mail/`. Normal
+reset a port's samples, stop debugging and delete its state directory. Deleting
+all of `build/uat-mail/` resets every Linux port, including GEM. Normal
 builds and packages do not initialize or include this test state or server.
 
-The GEM F5 profile sets `startup-with-shell off` in GDB. Without this setting,
+Every F5 profile sets `startup-with-shell off` in GDB. Without this setting,
 the `#` in `--select #mh/Mailbox/inbox` can become a shell comment; Blaise reports
 `--select needs a value` and Rasta closes when the session exits. Preserve the
-setting when editing the profile. Shell commands outside GDB still need quoted
+setting when editing profiles. Shell commands outside GDB still need quoted
 mailbox identifiers, for example `--select '#mh/Mailbox/inbox'`.
 
 To run the fixture regression test from the repository root:
@@ -126,13 +139,61 @@ docker run --rm -u "$(id -u):$(id -g)" \
 ```
 
 This uses temporary state under `build/`, leaving the interactive F5 mailbox
-alone. It checks real-client receive and UID reuse, rejected POP3 credentials,
+alone. For another Linux port, use its SDK image and executable and pass
+`--profile 'X11, Xephyr'` (or the matching profile name) to the test. It checks
+real-client receive and UID reuse, rejected POP3 credentials,
 SMTP capture and dot handling, restart, normal exit and Stop cleanup. It also
 runs GDB with the F5 setup commands to check literal mailbox arguments. It does
 not automate the full VS Code UI; the GEM GUI launch and framebuffer were
 checked separately through GDB/MI.
 
+`python3 -B tests/ui/test_debug_launchers.py` checks all F5 profiles against
+their launchers, including the executable and isolated mailbox paths, without
+starting Docker or contacting the Haiku VM.
+
+To check migration of an existing root-owned Motif demo mailbox, run this in the
+Motif SDK after a debug build:
+
+```sh
+docker run --rm --init -e HOME=/tmp -e ASAN_OPTIONS=detect_leaks=0 \
+  -v "$PWD:/work" -w /work wischner/gcc-x86_64-linux-motif:1.4.1 \
+  python3 -B tests/ui/test_cde_session.py \
+  --client build/platforms/linux-motif/debug/bin/blaise
+```
+
+This creates temporary root-owned state, reopens it through the CDE launcher,
+and verifies that the desktop user can load all seven messages, private password
+permissions remain intact, and no messages are lost or duplicated. The actual
+Motif F5 command was also checked through GDB/MI, with XTest keyboard input
+opening Accounts and Preferences from the Tools menu.
+
 ## Platforms
+
+For CDE and OPEN LOOK, `scripts/test/port_desktops.py` additionally uses real
+XTest mouse input. It opens a temporary seven-message mailbox, verifies that
+clicking a message clears its unread flag, resizes the window, drags the divider,
+and verifies another message can still be read. It saves screenshots and logs
+under `build/ui-review/ports/`. Run it inside the matching SDK session after a
+debug build; the SDK supplies its standard fonts, XTest, xwininfo and ImageMagick:
+
+```sh
+docker run --rm --init -e HOME=/tmp -e ASAN_OPTIONS=detect_leaks=0 \
+  -e CDE_SCREEN=1280x900 -v "$PWD:/work" -w /work \
+  wischner/gcc-x86_64-linux-motif:1.4.1 \
+  timeout 40 cde-xephyr python3 -B scripts/test/port_desktops.py linux-motif
+docker run --rm --init -u "$(id -u):$(id -g)" \
+  -e HOME=/tmp -e ASAN_OPTIONS=detect_leaks=0 -e OPENLOOK_SCREEN=1280x900 \
+  -v "$PWD:/work" -w /work wischner/gcc-x86_64-linux-openlook:1.3.1 \
+  timeout 40 openlook-xephyr python3 -B scripts/test/port_desktops.py linux-openlook
+```
+
+CDE's session wrapper runs as root for its desktop services. These commands use
+private headless parent displays and do not disturb an active F5 session.
+The test also checks that the initial window fits the display. Pass
+`--saved-window-size 1600 1000` after the backend name to exercise restoration of
+an oversized saved window. Omit the `*_SCREEN` overrides to use each SDK's normal
+Xephyr size. New windows default to 900 × 600; if the backend reports no monitor,
+restoration also uses that size as its upper bound.
 
 `make platform-test` runs `scripts/build/platforms.py`, which configures, builds
 and runs the desktop test in each image from `scripts/build/platforms.json`. Logs

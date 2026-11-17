@@ -41,8 +41,8 @@ struct common {
     bool ask_on_delete = false;
     bool empty_trash_on_exit = false;
     // Window.
-    int window_width = 1000;
-    int window_height = 760;
+    int window_width = 900;
+    int window_height = 600;
     int folder_pane_width = 220;
     int summary_pane_height = 280;
 

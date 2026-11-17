@@ -1,6 +1,6 @@
 # Platform status
 
-Updated 2026-11-11. Results below are dated observations, not a claim that every
+Updated 2026-11-17. Results below are dated observations, not a claim that every
 backend was retested on the final tree. The desktop test enters through Native's
 public input hooks; it does not prove every backend's physical input routing.
 See [TESTING.md](TESTING.md).
@@ -15,22 +15,45 @@ builds through `make platform-test PLATFORM=<backend>`, and
 | --- | --- | --- | --- |
 | SDL2 | Yes | Passed | 2026-11-11 Native v1.0.5 |
 | X11 | Yes | 221/224 | 2026-11-11 Native v1.0.5; same 3 failures on the previous pin |
-| Motif | Yes | 3 failures | 2026-11-11 Native v1.0.5; same assertion as X11 |
-| OPEN LOOK | Yes | 221/224 | 2026-11-11 Native v1.0.5; same assertion as X11 |
+| Motif | Yes | **1,160/1,160** | 2026-11-16 debug, edit-form pin plus split-layout patch; CDE physical-input check |
+| OPEN LOOK | Yes | **1,160/1,160** | 2026-11-16 debug, edit-form pin plus pane-position/focus patch; physical-input check |
 | Window Maker | Yes | 221/224 | 2026-11-11 Native v1.0.5; same assertion as X11 |
 | GEM (gemd) | Yes | **234/234** | 2026-11-11 Native v1.0.5, image 1.5.3 compact frames |
 | Wayland | Yes | Passed | 2026-11-11 Native v1.0.5 |
 | elementary | Yes | Passed | 2026-11-11 Native v1.0.5 |
-| Haiku | Cross-build | Passed | 2026-11-11 Native v1.0.5 |
+| Haiku | Cross-build | 1,151/1,160 | 2026-11-16 debug, edit-form pin plus collection-parent patch; startup fixed, 9 layout assertions remain |
 | Windows | Cross-build | Passed | 2026-11-11 Native v1.0.5 |
 | macOS | **Not built** | **Not run** | No recorded build |
 
-The X11-family failures are one check,
+The historical X11-family failures above are one check,
 `window_.right_.get_bounds().x2() == client.w()` in
 `tests/ui/test_desktop.cpp`: the right pane does not reach the client width.
 X11 fails it identically with the previous Native pin and its patches, so it
 predates v1.0.5. On GEM the window status bar now spans the client area up to
 the one-pixel compact border, as no corner grip remains.
+
+The 2026-11-16 Motif and OPEN LOOK fixes address actual startup, overlapping
+panes and focus failures. The desktop geometry assertion now uses the pane's
+allocated width, which also works with pane-local origins. Both ports passed
+the full debug desktop scenario and real mouse selection before and after
+resizing/dragging in their Xephyr sessions. OPEN LOOK still prints XView caret
+warnings during some programmatic form-focus checks; these no longer terminate
+the process. See [Native changes](NATIVE-CHANGES.md#fixed-along-the-way).
+
+The 2026-11-17 Motif F5 check found a separate launcher failure: the mailbox
+helper created private account files as root before CDE switched to its desktop
+user. The launcher now repairs legacy demo-state ownership and runs both the
+helper and debugger inside the CDE user session. The exact F5 command under
+GDB/MI displayed the mailbox tree and messages; real keyboard menu input opened
+Accounts and Preferences. A regression verifies migration of root-owned state,
+private password permissions and preservation of all seven messages without
+duplicate downloads.
+
+The Haiku debug run on `hotel` completed the desktop scenario after fixing
+collection attachment inside split panes. Its remaining assertions concern
+right-pane width, toolbar height and compose separator width. A fresh F5 mailbox
+also fetched seven messages and reached the GUI event loop under GDB. See
+[Native changes](NATIVE-CHANGES.md#fixed-along-the-way) for the carried patch.
 
 SDL2 screens were compared with Isaac in the earlier audit. GEM now also has
 Rasta framebuffer checks for toolbar heights, full button-width separator cells,

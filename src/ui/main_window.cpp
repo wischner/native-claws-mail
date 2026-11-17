@@ -110,7 +110,8 @@ void update_enabled(native::toolbar &bar, const std::string &id, bool value) {
 } // namespace
 
 main_window::main_window(const app::options &settings)
-    : native::app_wnd("Blaise", 60, 40, 1000, 760), settings_(settings),
+    : native::app_wnd("Blaise", 60, 40, prefs::common{}.window_width,
+                      prefs::common{}.window_height), settings_(settings),
       search_box_("", native::text_edit_mode::single_line, 0, 0, search_length, 24),
       show_box_({"All", "Unread"}, native::combo_box_style::drop_down_list, 0,
                 0, 100, 24),
@@ -405,8 +406,20 @@ void main_window::preferences_changed(const prefs::common &values, bool initial)
         } catch (const std::exception &error) {
             failure(error.what());
         }
-        set_dimensions(native::size(values.window_width, values.window_height));
-        split_.set_ratio(float(values.folder_pane_width) / std::max(1, values.window_width));
+        int width = values.window_width;
+        int height = values.window_height;
+        if (const auto *screen = native::screen::primary()) {
+            // Leave room for the initial offset, WM decorations and menus,
+            // including desktops whose work area is the full Xephyr screen.
+            width = std::min(width, std::max(640, int(screen->work_area().w()) - 120));
+            height = std::min(height, std::max(400, int(screen->work_area().h()) - 160));
+        } else {
+            // Some nested X servers expose no monitor through XRandR.
+            width = std::min(width, prefs::common{}.window_width);
+            height = std::min(height, prefs::common{}.window_height);
+        }
+        set_dimensions(native::size(width, height));
+        split_.set_ratio(float(values.folder_pane_width) / std::max(1, width));
         right_.set_ratio(float(values.summary_pane_height) / std::max(1, int(right_.get_dimensions().h)));
         if (values.check_on_startup) core_.receive_all();
     }

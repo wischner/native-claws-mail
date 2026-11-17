@@ -13,7 +13,7 @@ url=${NATIVE_URL:-https://github.com/wischner/native.git}
 ref=${NATIVE_REF:-426a42f0f6077580dc2234d0adca8bafdba3e041}
 dest="$root/build/deps/native"
 stamp="$root/build/deps/native.ref"
-# Carry shared chrome fixes until they are in the pinned release.
+# Carry backend fixes until they are in the pinned release.
 patches="$root/scripts/build/patches"
 # The directory may be empty when the pin already contains every fix.
 set -- "$patches"/*.patch

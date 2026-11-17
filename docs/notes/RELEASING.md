@@ -89,4 +89,4 @@ The F5 mailbox is development-only. Packaging does not copy
 `scripts/test/demo_mail.py`, `.vscode/`, `build/uat-mail/`, account credentials
 or synthetic messages, and release builds do not start the server or create its
 account. A distributed client starts with its normal configuration and mail
-paths; test account setup is confined to the GEM F5 launcher.
+paths; test account setup is confined to the F5 launchers.
