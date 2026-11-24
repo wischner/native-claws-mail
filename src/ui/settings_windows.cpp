@@ -161,8 +161,8 @@ int filter_window::layout() {
     text_.set_bounds(native::rect(12, 238 + h, width, h));
     int x = 12;
     for (auto *button : {&add_, &replace_, &remove_, &up_, &down_}) {
-        button->set_bounds(native::rect(x, 246 + 2 * h, 88, h));
-        x += 96;
+        button->set_bounds(native::rect(x, 246 + 2 * h, dialog_button_width, h));
+        x += dialog_button_width + dialog_gap;
     }
     return 246 + 3 * h;
 }
@@ -328,8 +328,20 @@ void address_window::open() {
     invalidate();
 }
 
+void address_window::on_bounds_changed() {
+    native::modeless_wnd::on_bounds_changed();
+    if (built_) place_children();
+}
+
 void address_window::place_children() {
     const int h = form_control_height(*this);
+    const auto dimensions = get_dimensions();
+    const int minimum_width = 2 * dialog_margin + 4 * dialog_button_width + 3 * dialog_gap;
+    const int minimum_height = 100 + 3 * h + 56;
+    if (dimensions.w < minimum_width || dimensions.h < minimum_height) {
+        set_dimensions(native::size(std::max(int(dimensions.w), minimum_width),
+                                    std::max(int(dimensions.h), minimum_height)));
+    }
     const int width = get_client_bounds().w() - 24;
     const int list_height = std::max(100, int(get_client_bounds().h()) - 3 * h - 56);
     rows_.set_bounds(native::rect(12, 12, width, list_height));
@@ -337,8 +349,8 @@ void address_window::place_children() {
     email_.set_bounds(native::rect(100, 28 + list_height + h, width - 88, h));
     int x = 12;
     for (auto *button : {&add_, &save_, &remove_, &import_}) {
-        button->set_bounds(native::rect(x, 36 + list_height + 2 * h, 96, h));
-        x += 104;
+        button->set_bounds(native::rect(x, 36 + list_height + 2 * h, dialog_button_width, h));
+        x += dialog_button_width + dialog_gap;
     }
 }
 

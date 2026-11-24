@@ -7,10 +7,9 @@
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 url=${NATIVE_URL:-https://github.com/wischner/native.git}
-# Native edit-form revision: explicit tab traversal, themed form heights,
-# plus the v1.0.5 toolbar and pane chrome fixes;
+# Native post-v1.1.0 revision, including OPEN LOOK popup spacing and hosted-text focus;
 # see docs/notes/NATIVE-CHANGES.md.
-ref=${NATIVE_REF:-426a42f0f6077580dc2234d0adca8bafdba3e041}
+ref=${NATIVE_REF:-f2211faeb8318f2c8b2546c29f0fd496a221fe85}
 dest="$root/build/deps/native"
 stamp="$root/build/deps/native.ref"
 # Carry backend fixes until they are in the pinned release.
@@ -34,6 +33,9 @@ if test ! -d "$dest/.git"; then
 fi
 # A shallow fetch accepts a branch, a tag or a full commit hash alike.
 git -C "$dest" fetch --quiet --depth 1 "$url" "$ref" >&2
+# This is a disposable dependency checkout. Remove files introduced by old
+# patches as well as resetting tracked files before applying the current set.
+git -C "$dest" clean --quiet -fd
 git -C "$dest" checkout --quiet --force --detach FETCH_HEAD >&2
 # A custom newer ref may already include this change.
 for patch in "$@"; do

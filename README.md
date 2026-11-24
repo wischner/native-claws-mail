@@ -42,12 +42,18 @@ compiler, headers or `../native` checkout:
   Dockerfile builds a new image. `DOCKER_IMAGE=...` uses another image.
 - **Native.** [Native](https://github.com/wischner/native) is fetched into
   `build/deps/native` at the commit pinned in `scripts/build/fetch_native.sh`.
-  The pin is Native commit `426a42f`, which adds explicit tab traversal and
-  themed form heights on top of the v1.0.5 toolbar and pane fixes. The fetch
-  script still applies any patch placed in `scripts/build/patches/`; there are none at this pin. See
+  The pin is Native commit `f2211fa`, newer than v1.1.0, including the
+  OPEN LOOK popup-spacing and toolbar-text focus fixes. The previous Haiku,
+  Motif and OPEN LOOK control patches are included upstream. A temporary SDK
+  patch centers OPEN LOOK button captions, and a backend patch centers
+  single-line field text. See
   [Native integration](docs/notes/NATIVE-CHANGES.md).
   `NATIVE_REF=<commit, tag or branch> make` builds another revision;
   `NATIVE_ROOT=/path/to/native make` builds against your own checkout.
+- **OPEN LOOK SDK.** Platform builds and F5 use `native-openlook-sdk:2`,
+  built from the pinned Native dependency's `scripts/linux/openlook/Dockerfile`.
+  It includes OPEN LOOK v0.5.0, XView menu spacing and centered button captions; the
+  older 1.3.1 toolchain image lacks the compact menu-bar bottom inset.
 - **Output.** Objects go to `build/sdl2/<mode>/`, binaries to `bin/`, release
   zips to `dist/`.
 

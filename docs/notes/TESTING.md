@@ -172,7 +172,9 @@ opening Accounts and Preferences from the Tools menu.
 For CDE and OPEN LOOK, `scripts/test/port_desktops.py` additionally uses real
 XTest mouse input. It opens a temporary seven-message mailbox, verifies that
 clicking a message clears its unread flag, resizes the window, drags the divider,
-and verifies another message can still be read. It saves screenshots and logs
+and verifies another message can still be read. On OPEN LOOK it also types
+`longer` into the toolbar search, selects the matching message, and clears the
+field with Ctrl+A/Backspace before proceeding. It saves screenshots and logs
 under `build/ui-review/ports/`. Run it inside the matching SDK session after a
 debug build; the SDK supplies its standard fonts, XTest, xwininfo and ImageMagick:
 
@@ -183,7 +185,7 @@ docker run --rm --init -e HOME=/tmp -e ASAN_OPTIONS=detect_leaks=0 \
   timeout 40 cde-xephyr python3 -B scripts/test/port_desktops.py linux-motif
 docker run --rm --init -u "$(id -u):$(id -g)" \
   -e HOME=/tmp -e ASAN_OPTIONS=detect_leaks=0 -e OPENLOOK_SCREEN=1280x900 \
-  -v "$PWD:/work" -w /work wischner/gcc-x86_64-linux-openlook:1.3.1 \
+  -v "$PWD:/work" -w /work native-openlook-sdk:2 \
   timeout 40 openlook-xephyr python3 -B scripts/test/port_desktops.py linux-openlook
 ```
 
@@ -211,3 +213,10 @@ Every `make` goal compiles in the SDK image. `make live-test` and
 `make claws-test` start Dovecot, Mailpit and Claws Mail with Docker on the host,
 then run the seed scripts and the test programs in the SDK image too, on the host
 network, so the host needs no Python packages or OpenSSL runtime.
+
+The dialog capture runner also supports OPEN LOOK: run
+`python3 -B scripts/test/dialogs.py --backend linux-openlook --mode debug`
+inside `native-openlook-sdk:2` with `openlook-xephyr`. It captures all eight
+secondary window types and minimum-size Compose/Address Book layouts under
+`build/ui-review/openlook-dialogs/`. The desktop suite checks captions against
+controls, equal dialog button dimensions and content containment after resize.

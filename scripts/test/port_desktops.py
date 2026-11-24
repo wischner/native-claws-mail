@@ -43,6 +43,10 @@ def main():
     xlib.XOpenDisplay.argtypes = [ctypes.c_char_p]
     xlib.XOpenDisplay.restype = ctypes.c_void_p
     xlib.XFlush.argtypes = [ctypes.c_void_p]
+    xlib.XStringToKeysym.argtypes = [ctypes.c_char_p]
+    xlib.XStringToKeysym.restype = ctypes.c_ulong
+    xlib.XKeysymToKeycode.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
+    xlib.XKeysymToKeycode.restype = ctypes.c_uint
     xlib.XCloseDisplay.argtypes = [ctypes.c_void_p]
     xlib.XResizeWindow.argtypes = [ctypes.c_void_p, ctypes.c_ulong,
                                   ctypes.c_uint, ctypes.c_uint]
@@ -50,6 +54,8 @@ def main():
                                         ctypes.c_int, ctypes.c_int, ctypes.c_ulong]
     xtst.XTestFakeButtonEvent.argtypes = [ctypes.c_void_p, ctypes.c_uint,
                                         ctypes.c_int, ctypes.c_ulong]
+    xtst.XTestFakeKeyEvent.argtypes = [ctypes.c_void_p, ctypes.c_uint,
+                                     ctypes.c_int, ctypes.c_ulong]
     display = xlib.XOpenDisplay(os.environ.get('DISPLAY', '').encode())
     if not display:
         raise RuntimeError('Run this test inside the backend desktop session')
@@ -65,6 +71,18 @@ def main():
     def capture(name):
         subprocess.run(['import', '-window', 'root',
                         str(out / f'{args.backend}-{name}.png')], check=True)
+
+    def key(name, down):
+        symbol = xlib.XStringToKeysym(name.encode())
+        code = xlib.XKeysymToKeycode(display, symbol)
+        assert code, f'No keycode for {name}'
+        xtst.XTestFakeKeyEvent(display, code, int(down), 0)
+        xlib.XFlush(display)
+        time.sleep(.05)
+
+    def tap(name):
+        key(name, True)
+        key(name, False)
 
     try:
         with tempfile.TemporaryDirectory(prefix='blaise-desktop-') as temporary, \
@@ -117,7 +135,28 @@ def main():
                                 'N' not in rows[number - 1].split('\t')[1])
                     wait_for(selected)
 
-                read_message(1, 117)
+                # OPEN LOOK v0.5.0 fits the menu-button panel to 25 pixels,
+                # removing 11 pixels of bottom padding from the old SDK.
+                first_row_y = 106 if args.backend == 'linux-openlook' else 117
+                if args.backend == 'linux-openlook':
+                    # Real typing must filter the table, not just update the
+                    # model through the public set_text() entry point.
+                    move(x + 100, y + 61)
+                    button(True)
+                    button(False)
+                    time.sleep(.15)  # Let the native panel finish taking focus.
+                    for letter in 'longer':
+                        tap(letter)
+                    read_message(7, first_row_y)
+                    capture('search')
+                    move(x + 100, y + 61)
+                    button(True)
+                    button(False)
+                    key('Control_L', True)
+                    tap('a')
+                    key('Control_L', False)
+                    tap('BackSpace')
+                read_message(1, first_row_y)
                 info = window_info()
                 desktop = subprocess.check_output(['xwininfo', '-root'], text=True)
                 width = int(re.search(r'Width:\s+(\d+)', info)[1])
@@ -137,7 +176,7 @@ def main():
                 move(x + 230, y + 300)
                 time.sleep(.1)
                 button(False)
-                read_message(2, 137)
+                read_message(2, first_row_y + 20)
                 capture('resized')
             except BaseException:
                 capture('failed')
@@ -148,6 +187,8 @@ def main():
                 process.wait(timeout=10)
     finally:
         xlib.XCloseDisplay(display)
+    if args.backend == 'linux-openlook':
+        print('OPEN LOOK: physical toolbar search and clearing passed')
     print(f'{args.backend}: physical message selection and input after '
           'window resize/divider drag passed')
 

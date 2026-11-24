@@ -45,7 +45,7 @@ std::string port_text(int port) {
 
 account_window::account_window(native::app_wnd &owner,
                                std::function<void(prefs::account_list)> done)
-    : form_window(owner, "Accounts", 680, 520), done_(std::move(done)),
+    : form_window(owner, "Accounts", 720, 520), done_(std::move(done)),
       add_("New"), remove_("Delete"), default_("Default"),
       protocol_({"IMAP", "POP3", "Send only"}, native::combo_box_style::drop_down_list),
       security_({"None", "TLS", "STARTTLS"}, native::combo_box_style::drop_down_list),
@@ -85,7 +85,8 @@ void account_window::populate() {
 
 int account_window::layout() {
     const int h = field_height();
-    const int label = 206;
+    const int list_width = 2 * dialog_button_width + dialog_gap;
+    const int label = dialog_margin + list_width + 16;
     const auto &font = native::font_t::stock(native::font_role::control);
     const int x = label + std::max(126, font.measure_text("Port, security").width + 12);
     const int width = std::max(260, int(get_client_bounds().w()) - x - 12);
@@ -104,13 +105,15 @@ int account_window::layout() {
     smtp_security_.set_bounds(native::rect(x + 80, row_y(9), width - 80, h));
     smtp_auth_.set_bounds(native::rect(label, row_y(10), width + x - label, h));
     remove_mail_.set_bounds(native::rect(label, row_y(11), width + x - label, h));
-    signature_.set_bounds(native::rect(x, row_y(12), width, 2 * h));
+    const int signature_height = std::max(80, 3 * h);
+    signature_.set_bounds(native::rect(x, row_y(12), width, signature_height));
     caption_bounds(10, label, row_y(12), x - label - 8);
-    const int bottom = row_y(12) + 2 * h;
-    rows_.set_bounds(native::rect(12, 12, 180, bottom - 2 * h - 28));
-    add_.set_bounds(native::rect(12, bottom - 2 * h - 8, 86, h));
-    remove_.set_bounds(native::rect(106, bottom - 2 * h - 8, 86, h));
-    default_.set_bounds(native::rect(12, bottom - h, 180, h));
+    const int bottom = row_y(12) + signature_height;
+    rows_.set_bounds(native::rect(12, 12, list_width, bottom - 2 * h - 28));
+    add_.set_bounds(native::rect(12, bottom - 2 * h - 8, dialog_button_width, h));
+    remove_.set_bounds(native::rect(12 + dialog_button_width + dialog_gap,
+                                   bottom - 2 * h - 8, dialog_button_width, h));
+    default_.set_bounds(native::rect(12, bottom - h, dialog_button_width, h));
     return bottom;
 }
 

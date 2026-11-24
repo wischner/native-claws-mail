@@ -21,6 +21,10 @@ class desktop_test;
 
 namespace ui {
 
+inline constexpr int dialog_button_width = 96;
+inline constexpr int dialog_gap = 8;
+inline constexpr int dialog_margin = 12;
+
 // Native edit-form metrics, resolved after the window is created.
 int form_control_height(native::wnd &window);
 void tab_sequence(std::initializer_list<native::wnd *> controls);

@@ -167,7 +167,7 @@ private:
             CHECK(ui::tool_icon("noSuchTool") == nullptr);
             // The suite's shell: two strips, four-part status, same size.
             CHECK(window_.toolbar_.get_items().size() > 10);
-            CHECK(window_.search_bar_.get_items().size() == 4);
+            CHECK(window_.search_bar_.get_items().size() == 6);
             check_toolbar_layout();
             const auto original = window_.get_bounds();
             window_.set_bounds(native::rect(original.x1(), original.y1(),
@@ -274,7 +274,10 @@ private:
         int top = -1;
         int previous_right = -1;
         for (const auto &item : window_.search_bar_.get_items()) {
-            if (!item.control) continue;
+            if (!item.control) {
+                if (item.id == "searchSeparator") previous_right += item.length;
+                continue;
+            }
             const auto slot = window_.search_bar_.get_item_bounds(item.id);
             const auto child = item.control->get_bounds();
             if (std::getenv("BLAISE_TEST_TRACE"))
@@ -283,7 +286,11 @@ private:
                           << " child=" << child.x1() << ',' << child.y1()
                           << ',' << child.w() << ',' << child.h() << '\n';
             CHECK(child.x1() >= slot.x1() && child.x2() <= slot.x2());
-            CHECK(item.control->get_border_sides() == native::border_sides::right);
+            const auto borders = item.id == "searchBox"
+                ? native::border_sides::bottom
+                : item.id == "searchLabel" ? native::border_sides::none
+                                           : native::border_sides::right;
+            CHECK(item.control->get_border_sides() == borders);
             CHECK(child.x1() == slot.x1() && child.x2() == slot.x2());
             if (previous_right >= 0) CHECK(child.x1() == previous_right);
             previous_right = child.x2();
@@ -438,6 +445,16 @@ private:
             CHECK(compose.body_.get_text().find("> Hello from") !=
                   std::string::npos);
         });
+        act("resize compose", [this] {
+            window_.composers_.front()->set_dimensions(native::size(240, 180));
+        });
+        settle("compose resized");
+        act("small compose", [this] {
+            auto &compose = *window_.composers_.front();
+            CHECK(compose.body_.get_bounds().y1() > compose.subject_.get_bounds().y2());
+            CHECK(compose.body_.get_bounds().y2() <= compose.get_client_bounds().y2());
+            CHECK(compose.body_.get_bounds().x2() <= compose.get_client_bounds().x2());
+        });
         act("send reply", [this] {
             auto &compose = *window_.composers_.front();
             compose.body_.insert(0, "Thanks.\n");
@@ -538,12 +555,25 @@ private:
             CHECK(box.x1() >= area.x1() && box.y1() >= area.y1());
             CHECK(box.x2() <= area.x2() && box.y2() <= area.y2());
             CHECK(box.h() >= ui::form_control_height(dialog));
+            if (dynamic_cast<native::button *>(control)) {
+                CHECK(box.w() == ui::dialog_button_width);
+                CHECK(box.h() == dialog.ok_.get_bounds().h());
+            }
             CHECK(control->on_native_tab({key_code::tab, native::key_action::press}));
             CHECK(control->on_native_tab({key_code::tab, native::key_action::press,
                                           false, native::key_modifiers::shift}));
             for (auto *other : dialog.controls_) {
                 if (other == control) continue;
                 const auto next = other->get_bounds();
+                CHECK(box.x2() <= next.x1() || next.x2() <= box.x1() ||
+                      box.y2() <= next.y1() || next.y2() <= box.y1());
+            }
+        }
+        for (const auto &caption : dialog.captions_) {
+            const native::rect box(caption.x, caption.y, caption.width,
+                                   ui::form_control_height(dialog));
+            for (auto *control : dialog.controls_) {
+                const auto next = control->get_bounds();
                 CHECK(box.x2() <= next.x1() || next.x2() <= box.x1() ||
                       box.y2() <= next.y1() || next.y2() <= box.y1());
             }
@@ -659,6 +689,19 @@ private:
             CHECK(dialog.rows_.get_items().size() == 1);
             CHECK(fs::exists(home_ / "cfg/addrbook/addrbook--index.xml"));
             CHECK(window_.books_.complete("ana").size() == 1);
+        });
+        act("resize address book", [this] {
+            window_.address_window_.set_dimensions(native::size(240, 180));
+        });
+        settle("address book resized");
+        act("small address book", [this] {
+            auto &dialog = window_.address_window_;
+            CHECK(dialog.rows_.get_bounds().y2() < dialog.name_.get_bounds().y1());
+            CHECK(dialog.email_.get_bounds().y2() < dialog.add_.get_bounds().y1());
+            CHECK(dialog.import_.get_bounds().x2() <= dialog.get_client_bounds().x2());
+            CHECK(dialog.import_.get_bounds().y2() <= dialog.get_client_bounds().y2());
+            for (auto *button : {&dialog.add_, &dialog.save_, &dialog.remove_, &dialog.import_})
+                CHECK(button->get_dimensions().w == ui::dialog_button_width);
         });
         act("address reopen", [this] {
             auto &dialog = window_.address_window_;

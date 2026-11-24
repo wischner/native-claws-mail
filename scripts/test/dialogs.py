@@ -2,8 +2,11 @@
 """Capture Blaise's dialogs and verify physical Tab/Shift+Tab on SDL/Xvfb.
 
 Run in the existing SDL SDK after `make ui-build`; requires Xvfb, ImageMagick
-and libXtst (already supplied by that SDK). Only synthetic test mail is used.
+and libXtst (already supplied by that SDK). For OPEN LOOK, run inside
+openlook-xephyr with --backend linux-openlook --mode debug; keyboard search
+is covered separately by port_desktops.py. Only synthetic test mail is used.
 """
+import argparse
 import ctypes
 import os
 import pathlib
@@ -51,23 +54,33 @@ def keyboard_check():
     xlib.XCloseDisplay(d)
 
 root = pathlib.Path(__file__).resolve().parents[2]
-out = root / 'build/ui-review/dialogs'
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--backend', choices=['sdl2', 'linux-openlook'], default='sdl2')
+parser.add_argument('--mode', choices=['debug', 'release'], default='release')
+args = parser.parse_args()
+openlook = args.backend == 'linux-openlook'
+out = root / 'build/ui-review' / ('openlook-dialogs' if openlook else 'dialogs')
 out.mkdir(parents=True, exist_ok=True)
-env = dict(os.environ, DISPLAY=':93', SDL_VIDEODRIVER='x11', SDL_RENDER_DRIVER='software', BLAISE_TEST_TRACE='1', BLAISE_TEST_STEP_MS='700', BLAISE_TEST_KEYBOARD='1')
-x = subprocess.Popen(['Xvfb', ':93', '-screen', '0', '1280x900x24', '-nolisten', 'tcp'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+env = dict(os.environ, BLAISE_TEST_TRACE='1', BLAISE_TEST_STEP_MS='700')
+x = None
+if not openlook:
+    env.update(DISPLAY=':93', SDL_VIDEODRIVER='x11', SDL_RENDER_DRIVER='software', BLAISE_TEST_KEYBOARD='1')
+    x = subprocess.Popen(['Xvfb', ':93', '-screen', '0', '1280x900x24', '-nolisten', 'tcp'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+client = (root / 'build/platforms/linux-openlook' / args.mode / 'bin/test_desktop'
+          if openlook else root / 'build/sdl2' / args.mode / 'tests/test_desktop')
 p = None
 watchdog = None
 try:
     time.sleep(0.5)
-    p = subprocess.Popen([str(root / 'build/sdl2/release/tests/test_desktop')], env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    p = subprocess.Popen([str(client)], env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     watchdog = threading.Timer(120, p.kill)
     watchdog.daemon = True
     watchdog.start()
-    selected = {'open reply','accounts','preferences','filters','cancel and reopen','choice dialog','address book','network log'}
+    selected = {'open reply','accounts','preferences','filters','cancel and reopen','choice dialog','address book','network log','small compose','small address book'}
     for line in p.stdout:
         print(line, end='', flush=True)
         step = line.removeprefix('step: ').strip()
-        if step == 'preferences':
+        if step == 'preferences' and not openlook:
             time.sleep(.2)
             keyboard_check()
         if step in selected:
@@ -80,5 +93,6 @@ finally:
     if p and p.poll() is None:
         p.kill()
         p.wait()
-    x.terminate()
-    x.wait()
+    if x:
+        x.terminate()
+        x.wait()

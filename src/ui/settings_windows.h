@@ -122,6 +122,7 @@ private:
     void remove_person();
     void import_file();
     void place_children();
+    void on_bounds_changed() override;
 
     addr::book_list &books_;
     std::function<bool()> changed_;

@@ -1,9 +1,33 @@
 # Platform status
 
-Updated 2026-11-17. Results below are dated observations, not a claim that every
+Updated 2026-11-24. Results below are dated observations, not a claim that every
 backend was retested on the final tree. The desktop test enters through Native's
 public input hooks; it does not prove every backend's physical input routing.
 See [TESTING.md](TESTING.md).
+
+The 2026-11-24 update to Native `67a1c61` rebuilt SDL2, Motif and OPEN LOOK
+in debug mode without local dependency patches. All three passed 1,160 desktop
+assertions. Motif and OPEN LOOK runners exited successfully. The SDL2
+`make MODE=debug ui-test` command exited with failure after those assertions:
+LeakSanitizer reported 299,591 bytes in 293 allocations at shutdown, with
+allocation stacks in SDL2, SDL2_ttf and HarfBuzz. This is not a clean leak check.
+No other backends were retested for this update.
+
+The OPEN LOOK SDK was then corrected from the old 1.3.1 toolchain to
+`native-openlook-sdk:2` (OPEN LOOK v0.5.0 plus Native's menu-spacing patch).
+Its debug rebuild passed all 1,160 checks again. An isolated olwm/Xephyr
+comparison measured the menu bar shrinking from 36 to 25 pixels. XTest
+message selection, resizing and divider dragging passed after updating the
+fixture's click coordinates for the compact menu bar.
+
+The subsequent toolbar-search repair retains the input underline and initially
+carried `openlook-hosted-text-focus.patch`. The current pin, `f2211fa`, includes
+that exact fix upstream, so the patch was removed. Its source matches the
+previously tested fix byte for byte. All 1,160 OPEN LOOK desktop checks pass;
+the XTest scenario additionally types a filter, selects its matching message,
+and clears it with Ctrl+A/Backspace before the selection/resize checks.
+SDL2 also passed all 1,160 checks after the shared search-border change, with
+`ASAN_OPTIONS=detect_leaks=0`; the earlier shutdown-leak finding remains open.
 
 The 2026-11-11 run used the Native v1.0.5 pin with no carried patches, release
 builds through `make platform-test PLATFORM=<backend>`, and
@@ -13,10 +37,10 @@ builds through `make platform-test PLATFORM=<backend>`, and
 
 | Backend | Builds | Desktop test | Last recorded scope |
 | --- | --- | --- | --- |
-| SDL2 | Yes | Passed | 2026-11-11 Native v1.0.5 |
+| SDL2 | Yes | **1,160/1,160**; shutdown leak report | 2026-11-24 debug, Native `67a1c61`; see below |
 | X11 | Yes | 221/224 | 2026-11-11 Native v1.0.5; same 3 failures on the previous pin |
-| Motif | Yes | **1,160/1,160** | 2026-11-16 debug, edit-form pin plus split-layout patch; CDE physical-input check |
-| OPEN LOOK | Yes | **1,160/1,160** | 2026-11-16 debug, edit-form pin plus pane-position/focus patch; physical-input check |
+| Motif | Yes | **1,160/1,160** | 2026-11-24 debug, Native `67a1c61`, no local patches |
+| OPEN LOOK | Yes | **1,160/1,160** | 2026-11-24 debug, Native `67a1c61`, matching OPEN LOOK v0.5.0 SDK; XTest interaction passed |
 | Window Maker | Yes | 221/224 | 2026-11-11 Native v1.0.5; same assertion as X11 |
 | GEM (gemd) | Yes | **234/234** | 2026-11-11 Native v1.0.5, image 1.5.3 compact frames |
 | Wayland | Yes | Passed | 2026-11-11 Native v1.0.5 |
@@ -53,7 +77,8 @@ The Haiku debug run on `hotel` completed the desktop scenario after fixing
 collection attachment inside split panes. Its remaining assertions concern
 right-pane width, toolbar height and compose separator width. A fresh F5 mailbox
 also fetched seven messages and reached the GUI event loop under GDB. See
-[Native changes](NATIVE-CHANGES.md#fixed-along-the-way) for the carried patch.
+[Native changes](NATIVE-CHANGES.md#fixed-along-the-way) for the fix now included
+upstream.
 
 SDL2 screens were compared with Isaac in the earlier audit. GEM now also has
 Rasta framebuffer checks for toolbar heights, full button-width separator cells,
@@ -82,3 +107,8 @@ all other backends, and not every physical keyboard/mouse path was exercised.
   `lib/net/socket_transport.cpp` sends with `MSG_NOSIGNAL`, which macOS lacks
   (it uses `SO_NOSIGPIPE`). It has not been tried, so the release workflow has no
   macOS job yet.
+
+The 2026-11-24 dialog polish passes **1,507/1,507** checks on SDL2 and OPEN LOOK
+with the pinned Native dependency and SDK 2 caption patch. Search typing and
+clearing, physical message selection, resize and divider input also pass on
+OPEN LOOK. See [dialog review](DIALOG-REVIEW.md) for the visual scope.

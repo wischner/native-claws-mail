@@ -215,7 +215,19 @@ void compose_window::build_toolbar() {
     });
 }
 
+void compose_window::on_bounds_changed() {
+    native::modeless_wnd::on_bounds_changed();
+    if (body_.get_created()) place_children();
+}
+
 void compose_window::place_children() {
+    const int h = form_control_height(*this);
+    const auto dimensions = get_dimensions();
+    const int minimum_height = 5 * (h + 8) + files_height + 140;
+    if (dimensions.w < 480 || dimensions.h < minimum_height) {
+        set_dimensions(native::size(std::max(480, int(dimensions.w)),
+                                    std::max(minimum_height, int(dimensions.h))));
+    }
     const native::rect client = get_client_bounds();
     const int x = client.p.x + margin * 2 + label_width;
     const int width =
@@ -234,10 +246,11 @@ void compose_window::place_children() {
     const int bottom = client.p.y + static_cast<int>(client.d.h) - margin;
     const int body_bottom =
         has_files ? bottom - files_height - margin : bottom;
+    const int body_top = y + margin / 2;
     body_.set_bounds(native::rect(
-        client.p.x, static_cast<native::coord>(y + margin / 2),
-        client.d.w,
-        static_cast<native::dim>(std::max(60, body_bottom - y))));
+        client.p.x + margin, static_cast<native::coord>(body_top),
+        client.d.w - 2 * margin,
+        static_cast<native::dim>(std::max(60, body_bottom - body_top))));
     files_.set_bounds(native::rect(
         client.p.x + margin,
         static_cast<native::coord>(has_files ? bottom - files_height

@@ -5,6 +5,22 @@ These extend [Native](https://github.com/wischner/native);
 commit Blaise builds against. A contract added to Native has to work on every
 backend, so nothing here is SDL2-only.
 
+## Dependency update — 2026-11-24
+
+The current pin is `f2211faeb8318f2c8b2546c29f0fd496a221fe85`, the latest
+upstream commit at this update, after v1.1.0. It includes OPEN LOOK menu
+separator spacing, drawing, tab and hosted-text focus fixes. The previous Haiku parent
+lookup, Motif split layout and OPEN LOOK pane/focus patches are included
+upstream (Motif has further layout improvements), so those patches were removed.
+The hosted-text focus repair below is also upstream in `f2211fa`; its
+temporary patch has been removed. The carried dependency patches are
+`openlook-button-caption.patch` for SDK captions and
+`openlook-text-alignment.patch` for vertically centered single-line fields.
+
+Debug builds and all 1,160 desktop assertions passed on SDL2, Motif and
+OPEN LOOK. SDL2 subsequently failed its shutdown leak check; see
+[platform status](PLATFORM-STATUS.md) for the exact validation scope.
+
 | Change | Why | Backends |
 | --- | --- | --- |
 | `native::password_edit` | An account dialog must not show passwords, and `text_edit` has no masked mode | All, shared code |
@@ -21,22 +37,64 @@ is taught in chapter 22 of Programming Native, its decision is recorded in
 Isaac's `tab_strip` is also included in the pinned revision. Both controls are
 committed and pushed, so the build fetches them from GitHub.
 
+## OPEN LOOK SDK alignment — 2026-11-24
+
+Updating Native alone left Blaise using the old XView toolkit in the
+`wischner/gcc-x86_64-linux-openlook:1.3.1` image (OpenLook revision `107a9a0`).
+Platform builds, packaging and F5 now select `native-openlook-sdk:2`, built
+from the pinned Native checkout's `scripts/linux/openlook/Dockerfile`.
+It uses OPEN LOOK v0.5.0 (`4af2079`) and Native's menu-spacing patch.
+
+The toolkit's compact horizontal menu-button panel policy removes the extra
+bottom inset. In isolated olwm sessions using the same Blaise binary, the
+menu bar measured 36 pixels with the old SDK and 25 with the new SDK. The
+command toolbar measures 24 pixels with two-pixel padding above and below
+its item slots; the following search/filter toolbar is a separate 28-pixel
+row. Captures and X window geometry are under the ignored
+`build/ui-review/openlook-spacing/` directory. The rebuilt debug application
+passed all 1,160 desktop assertions with the matching SDK. XTest message
+selection and input after resizing/divider dragging also passed, using click
+coordinates adjusted for the compact menu bar.
+
+## OPEN LOOK toolbar search — 2026-11-24
+
+The first control in the second toolbar row is message search. Its bottom
+border is retained so OPEN LOOK draws the native text-field underline instead
+of leaving an invisible empty field. Other toolbar controls keep their shared
+right dividers.
+
+The earlier Native revision also kept portable input focus on the toolbar
+canvas after clicking its windowless XView text field. Keyboard dispatch then
+consumed the text for that canvas before XView could insert it. Native
+`f2211fa` now publishes the actual Panel caret item as
+the portable focus owner before key dispatch. The fix includes a lifetime check
+because transferring focus may invoke application callbacks.
+
+The debug desktop suite passes all 1,160 checks on OPEN LOOK and SDL2
+(SDL2 shutdown leak checking disabled as in the platform runner). The physical
+OPEN LOOK test
+now types `longer` in search, selects the seventh fixture message from the
+filtered first row, clears with Ctrl+A/Backspace, and verifies message selection
+again before and after window resizing/divider dragging. A local capture is
+`build/ui-review/ports/linux-openlook-search.png`.
+
 ## Fixed along the way
 
 - Motif's nested split views could loop indefinitely in Xt geometry negotiation
-  during startup or resizing. `motif-split-layout.patch` applies resolved pane
-  geometry directly, positions the native sashes at the same dividers, and keeps
+  during startup or resizing. The former `motif-split-layout.patch` applied
+  resolved pane geometry directly, positioned native sashes at the same dividers,
+  and kept
   collection scrollbars inside their collection rather than adding extra children
   to `XmPanedWindow`. Motif's panes use coordinates within the splitter, since
   this backend has no separate pane host widgets.
 
 - OPEN LOOK rendered all three mail panes at the same frame position because
   its frame-owned collection panels omitted the offsets of intermediate split
-  pane hosts. `openlook-pane-position-focus.patch` includes those offsets during
-  creation and repositioning. It also focuses the actual child window of an
+  pane hosts. The former `openlook-pane-position-focus.patch` included those
+  offsets during creation and repositioning. It also focused the actual child window of an
   XView multiline Panel item, avoiding a null `xv_set` during account-dialog
-  tab traversal. Both patches live under `scripts/build/patches/` and are applied
-  automatically by the Native dependency fetcher.
+  tab traversal. Both fixes are now included upstream; their local patches
+  were removed.
 
   On 2026-11-16 both debug builds passed **1,160/1,160 desktop checks**. Actual
   CDE and OPEN LOOK Xephyr sessions also displayed the synthetic inbox, opened
@@ -48,9 +106,9 @@ committed and pushed, so the build fetches them from GitHub.
 - Haiku's virtual table host omitted the child when resolving its parent view.
   A split view needs that child to choose its first or second pane, so opening
   Blaise threw `Haiku: collection requires a created parent.` before the main
-  window appeared. `scripts/build/patches/haiku-collection-parent.patch` passes
-  the collection owner to the existing parent resolver. The dependency fetcher
-  applies this fix to the pinned Native revision; the public API is unchanged.
+  window appeared. The former `haiku-collection-parent.patch` passed
+  the collection owner to the existing parent resolver. The pinned Native
+  revision now includes this fix; the public API is unchanged.
   On 2026-11-16 the rebuilt debug client fetched all seven fixture messages and
   reached `native::app::main_loop` under GDB on `hotel`. The desktop scenario
   completed with 1,151/1,160 checks passing; the remaining nine assertions concern
@@ -70,6 +128,16 @@ committed and pushed, so the build fetches them from GitHub.
   outlive `TTF_Quit`, so releasing a font now checks `TTF_WasInit`.
 
 ## GEM UI integration
+
+### Popup menu separator height
+
+GEM's AES runtime normalizes application menu geometry when `menu_bar()`
+installs the tree. Separator height therefore belongs to GEM, not Blaise or
+Native. The companion runtime fix uses one seven-pixel separator metric for
+application popups and the desktop system menu, including layout and hit
+testing. Rebuild and restart the selected GEM runtime to pick up this change;
+rebuilding Blaise alone does not replace the server. The local runtime selected
+by `build/gem-runtime.path` is described below.
 
 ### Unread text and toolbar group spacing
 
@@ -101,8 +169,8 @@ Native's table header painter now honors omitted outer edges instead of
 redrawing them as cell borders. Window-owned GEM status bars stop before the
 resize corner; the private backend derives its span from AES `wind_calc`.
 Nested document status bars and windows with native scroll tracks retain their
-existing bounds. These shared fixes are part of Native v1.0.5, the pinned
-release, so no patch is carried.
+existing bounds. These shared fixes have been included since Native v1.0.5,
+so no patch is carried.
 
 The published GEM image at digest
 `sha256:14c2c1638d545a175a9e16489f32a47a392c2b1ce44e140f1fffba1a96b6b423`
@@ -135,15 +203,16 @@ older server can reintroduce menu or startup failures.
 
 ### GEM toolbar consistency
 
-Blaise now pins the edit-form revision,
-`426a42f0f6077580dc2234d0adca8bafdba3e041`, in
+Blaise pins Native commit
+`f2211faeb8318f2c8b2546c29f0fd496a221fe85` in
 `scripts/build/fetch_native.sh`. Normal Make, CMake and VS Code builds fetch
 this revision automatically; no `NATIVE_ROOT` override is required. A custom
 Native checkout must include the shared toolbar and standard-icon APIs.
 
-The search/filter/sort fields use `border_sides::right` and
+The search/filter/sort fields use a right divider (search also retains its
+bottom border to identify the editable field) and
 `tool_item::control_fill_width`, so adjacent controls meet at one separator
-without their own top, bottom or left borders. Native still owns control
+without duplicate outer frames. Native still owns control
 placement, vertical alignment, focus and dropdown behavior. Native v1.0.5
 provides `control_fill_width`; custom Native checkouts must include it too.
 
@@ -242,8 +311,8 @@ The controls below were already provided by Native and remain in use:
 
 ## Dialog integration (2026-11-15)
 
-The pin now includes Native's `vision_edit_form.cpp`, explicit `set_tab_order`,
-`focus()` and Enter-as-Tab, and the GEM standalone `form_control_height` metric.
+The pin used for this review included Native's `vision_edit_form.cpp`,
+explicit `set_tab_order`, `focus()` and Enter-as-Tab, and the GEM standalone `form_control_height` metric.
 Blaise uses the sample's pattern of resolving metrics after creation, laying out
 fields by rows, aligning painted captions, and assigning positive tab orders.
 On backends without a standalone form metric it uses `defaults().text_edit_height`:
@@ -253,4 +322,26 @@ inputs keep their separate compact geometry.
 All eight application-owned secondary window types were reviewed and updated;
 see [the implementation and validation report](DIALOG-REVIEW.md). Native-owned
 file choosers and message boxes retain their library layouts. The backend fixes
-listed above are carried automatically; no sibling-checkout override is required.
+listed above are now included upstream; no sibling-checkout override is required.
+
+## Dialog polish — 2026-11-24
+
+The search toolbar has a painted, non-tabbable “Search:” caption (Native has
+no label control), the editable underline, then a standard toolbar gap (whitespace on OPEN LOOK).
+Application dialog actions share a 96-pixel width and themed height. Accounts
+reserves at least 80 pixels for the native multiline signature editor; compose
+and Address Book enforce minimum sizes to keep content and actions separated.
+
+Native's sibling checkout `../native` carries the same SDK change as
+`openlook-button-caption.patch`. SDK 2 rebuilds XView and OLGX from the pinned
+OPEN LOOK source and centers ordinary push-button captions using native font
+measurements. Menu rows and menu-mark buttons retain their alignment. Deploy
+the matching OLGX runtime with the application. No button painting is added to
+Blaise.
+
+OPEN LOOK single-line fields now center their intrinsic XView height within
+the allocated row on creation and geometry updates. This aligns search text
+with the prompt without moving the prompt. The custom visible search rule was
+removed; the theme supplies ordinary toolbar group spacing. The Native fetch
+helper cleans its disposable checkout before reapplying patches, including
+files introduced by previous patches.

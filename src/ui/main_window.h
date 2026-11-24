@@ -120,6 +120,7 @@ private:
     bool preferences_loaded_ = false;
     bool closing_ = false;
 
+    native::canvas search_label_;
     native::text_edit search_box_;
     native::combo_box show_box_;
     native::combo_box sort_box_;

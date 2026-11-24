@@ -7,7 +7,8 @@ reviewed the main window's search/filter/sort controls. Also reviewed the
 **4 Native file-chooser instances** and **16 message-box call sites**; their
 layouts remain owned by Native.
 
-The dependency is pinned to `426a42f0f6077580dc2234d0adca8bafdba3e041`.
+This review used Native commit `426a42f0f6077580dc2234d0adca8bafdba3e041`.
+See [Native integration](NATIVE-CHANGES.md) for the current dependency pin.
 The reference was Native's `src/vision_edit_form.cpp`, plus `wnd_focus.cpp`
 and `input_geometry.cpp`. The latter constrains single-line inputs to the
 standalone form height, or the backend's ordinary text-edit height when no
@@ -151,3 +152,58 @@ Remaining limits:
 - Save errors are reported; modal settings currently close after handing their
   copy to the asynchronous engine. A rejected save reopens with the previous
   persisted values, so users must re-enter the rejected edit after fixing access.
+
+## OPEN LOOK dialog polish — 2026-11-24
+
+Revisited all eight application-owned secondary windows with Native `f2211fa`
+and `native-openlook-sdk:2`. The SDK change is also present in `../native`;
+Blaise carries `openlook-button-caption.patch` and
+`openlook-text-alignment.patch` until they are included upstream.
+
+- Search now has a “Search:” caption without a tab stop with the toolbar background,
+  an underlined edit field, and normal toolbar group spacing. OPEN LOOK uses
+  whitespace without a vertical rule. Single-line XView text is vertically
+  centered in its allocation to align with the prompt.
+- Every application dialog action uses the shared 96-pixel button width and
+  the current form-control height. Accounts' New, Delete and Default buttons
+  use the same dimensions as OK/Cancel, Filters and Address Book actions.
+- OPEN LOOK's native OLGX renderer centers ordinary push-button text using its
+  own font measurements. Menu rows and buttons with menu marks retain their
+  normal alignment; Native still owns the controls and input handling.
+- Accounts reserves at least 80 pixels for its multiline signature editor,
+  keeping its native frame clear of OK/Cancel. The list column is wide enough
+  for two standard action buttons with an 8-pixel gap.
+- Compose and Address Book enforce minimum dimensions and relayout on both
+  portable bounds changes and native resize events. Compose's editor has
+  matching side margins, and its bottom is calculated from the editor's actual
+  top so it cannot extend into the attachment area or footer.
+- Preferences, Find/New Folder/Rename, destination choices and Network Log
+  retain their existing aligned layouts; form action buttons receive the same
+  sizing and caption treatment. Native file choosers and notices retain their
+  toolkit-managed layouts and benefit from the shared OLGX caption change.
+
+Validation: **1,507/1,507** desktop checks on both SDL and OPEN LOOK, including
+caption/control overlap, uniform action dimensions and minimum-size resizing.
+Debug tests use ASan/UBSan with leak detection disabled as in the platform
+runner. Physical OPEN LOOK input verified search typing, filtering, clearing,
+message selection and input after resize/divider dragging. Screenshots of all
+8 application window types, plus the small Compose and Address Book layouts,
+are in `build/ui-review/openlook-dialogs/`. Native chooser/notice call sites
+were reviewed; their complete platform-specific layouts were not exhaustively
+exercised in this pass.
+
+Reproduce the OPEN LOOK screenshots inside its isolated desktop:
+
+```sh
+docker run --rm --init -u "$(id -u):$(id -g)" -e HOME=/tmp \
+  -e ASAN_OPTIONS=detect_leaks=0 -e OPENLOOK_SCREEN=1280x900 \
+  -v "$PWD:/work" -w /work native-openlook-sdk:2 \
+  openlook-xephyr python3 -B scripts/test/dialogs.py \
+  --backend linux-openlook --mode debug
+```
+
+The search follow-up was verified with physical typing/clearing and a fresh
+OPEN LOOK capture: prompt, input text and All filter share the same baseline,
+and the search/filter gap has no rule. The 1,507 desktop assertions pass on
+OPEN LOOK and SDL; the alignment repair is carried in Native and the pinned
+dependency.

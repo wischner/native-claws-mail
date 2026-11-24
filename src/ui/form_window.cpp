@@ -13,7 +13,7 @@
 namespace ui {
 namespace {
 
-constexpr int button_width = 88;
+constexpr int button_width = dialog_button_width;
 constexpr int button_height = 30;
 constexpr int margin = 12;
 

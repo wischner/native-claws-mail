@@ -53,6 +53,7 @@ private:
 
     void build_toolbar();
     void place_children();
+    void on_bounds_changed() override;
     void run(std::string_view command);
     void send();
     void save();

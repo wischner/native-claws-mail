@@ -244,7 +244,30 @@ void main_window::build_toolbar() {
 }
 
 void main_window::build_search_bar() {
+    search_label_.set_dimensions(native::size(64, 24));
+    search_label_.set_tab_order(0);
+    search_label_.on_wnd_paint.connect([](native::wnd_paint_event event) {
+        auto appearance = native::theme::create(event.g);
+        event.g.clear(appearance->get_menu_bar_background_color());
+        event.g.set_font(native::font_t::stock(native::font_role::control));
+        event.g.set_ink(appearance->get_button_foreground_color());
+        native::text_layout layout;
+        layout.horizontal = native::text_align::center;
+        layout.vertical = native::text_valign::center;
+        event.g.draw_text("Search:", native::rect(0, 0, 64, 24), layout);
+        return true;
+    });
+    search_bar_.add_item(make_control("searchLabel", search_label_, 64));
+    search_label_.set_border_sides(native::border_sides::none);
     search_bar_.add_item(make_control("searchBox", search_box_, search_length));
+    // OPEN LOOK identifies editable text by its underline. Keep the field
+    // visible even though the toolbar's other controls share only dividers.
+    search_box_.set_border_sides(native::border_sides::bottom);
+    native::tool_item separator;
+    separator.id = "searchSeparator";
+    separator.kind = native::tool_kind::separator;
+    separator.length = 12;
+    search_bar_.add_item(std::move(separator));
     search_bar_.add_item(make_control("showBox", show_box_, 100));
     search_bar_.add_item(make_control("sortBox", sort_box_, 110));
     native::tool_item threads = make_tool(
