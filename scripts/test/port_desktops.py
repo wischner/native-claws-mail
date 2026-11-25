@@ -149,6 +149,46 @@ def main():
                         tap(letter)
                     read_message(7, first_row_y)
                     capture('search')
+                    # The reader must expose a real XView scrollbar, and
+                    # dragging it must change the document, not just its thumb.
+                    tree = subprocess.check_output(
+                        ['xwininfo', '-id', hex(window), '-tree'], text=True)
+                    bars = re.findall(
+                        r'(0x[0-9a-f]+).*?  (\d+)x(\d+)\+\d+\+\d+'
+                        r'  \+(-?\d+)\+(-?\d+)', tree)
+                    bars = [item for item in bars
+                            if int(item[1]) == 19 and int(item[2]) > 100]
+                    assert bars, 'No native vertical scrollbar found'
+                    reader_bar = max(bars, key=lambda item: int(item[4]))
+                    bar_id, _, bar_height, bar_x, bar_y = reader_bar
+                    bar_info = subprocess.check_output(
+                        ['xwininfo', '-id', bar_id], text=True)
+                    assert 'IsViewable' in bar_info, 'Reader scrollbar is hidden'
+                    # The last vertical bar must belong to the lower reader.
+                    assert int(bar_y) > y + 200, 'Reader scrollbar is missing'
+                    parent_info = subprocess.check_output(
+                        ['xwininfo', '-id', bar_id, '-tree'], text=True)
+                    reader_id = re.search(
+                        r'Parent window id: (0x[0-9a-f]+)', parent_info)[1]
+                    reader_info = subprocess.check_output(
+                        ['xwininfo', '-id', reader_id], text=True)
+                    reader_width = int(re.search(r'Width:\s+(\d+)', reader_info)[1])
+
+                    def reader_pixels():
+                        return subprocess.check_output([
+                            'import', '-window', reader_id, '-crop',
+                            f'{reader_width - 20}x{bar_height}+0+0', 'RGB:-'])
+
+                    before_scroll = reader_pixels()
+                    move(int(bar_x) + 9, int(bar_y) + 30)
+                    button(True)
+                    time.sleep(.1)
+                    move(int(bar_x) + 9, int(bar_y) + int(bar_height) - 30)
+                    time.sleep(.1)
+                    button(False)
+                    time.sleep(.3)
+                    assert reader_pixels() != before_scroll, 'Scrollbar did not scroll text'
+                    capture('reader-scrolled')
                     move(x + 100, y + 61)
                     button(True)
                     button(False)
@@ -157,6 +197,11 @@ def main():
                     key('Control_L', False)
                     tap('BackSpace')
                 read_message(1, first_row_y)
+                if args.backend == 'linux-openlook':
+                    time.sleep(.2)
+                    bar_info = subprocess.check_output(
+                        ['xwininfo', '-id', bar_id], text=True)
+                    assert 'IsUnMapped' in bar_info, 'Short message retains scrollbar'
                 info = window_info()
                 desktop = subprocess.check_output(['xwininfo', '-root'], text=True)
                 width = int(re.search(r'Width:\s+(\d+)', info)[1])
@@ -189,6 +234,7 @@ def main():
         xlib.XCloseDisplay(display)
     if args.backend == 'linux-openlook':
         print('OPEN LOOK: physical toolbar search and clearing passed')
+        print('OPEN LOOK: long-message scrollbar drag and short-message hiding passed')
     print(f'{args.backend}: physical message selection and input after '
           'window resize/divider drag passed')
 

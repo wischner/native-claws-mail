@@ -7,9 +7,9 @@
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 url=${NATIVE_URL:-https://github.com/wischner/native.git}
-# Native post-v1.1.0 revision, including top-level window icons and OPEN LOOK fixes;
+# Native post-v1.1.0 revision, including window icons, icon text and OPEN LOOK fixes;
 # see docs/notes/NATIVE-CHANGES.md.
-ref=${NATIVE_REF:-5643515827b329fcfe7c25caccc2451786c9a962}
+ref=${NATIVE_REF:-33ead4375d26271cee36c40910e1d8bde12e7cd2}
 dest="$root/build/deps/native"
 stamp="$root/build/deps/native.ref"
 # Carry backend fixes until they are in the pinned release.

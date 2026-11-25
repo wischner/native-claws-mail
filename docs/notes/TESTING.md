@@ -173,8 +173,10 @@ For CDE and OPEN LOOK, `scripts/test/port_desktops.py` additionally uses real
 XTest mouse input. It opens a temporary seven-message mailbox, verifies that
 clicking a message clears its unread flag, resizes the window, drags the divider,
 and verifies another message can still be read. On OPEN LOOK it also types
-`longer` into the toolbar search, selects the matching message, and clears the
-field with Ctrl+A/Backspace before proceeding. It saves screenshots and logs
+`longer` into the toolbar search, selects the matching message, checks its
+native vertical scrollbar and drags it to verify that the reader text moves.
+It clears the field with Ctrl+A/Backspace and verifies that opening a short
+message hides the scrollbar before proceeding. It saves screenshots and logs
 under `build/ui-review/ports/`. Run it inside the matching SDK session after a
 debug build; the SDK supplies its standard fonts, XTest, xwininfo and ImageMagick:
 

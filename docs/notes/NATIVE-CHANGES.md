@@ -7,12 +7,44 @@ backend, so nothing here is SDL2-only.
 
 ## Dependency update — 2026-11-25
 
-The current pin is `5643515827b329fcfe7c25caccc2451786c9a962` ("Icon changes."),
-the latest upstream commit at this update. It adds `app_wnd::set_icon()` and
+The current pin is `33ead4375d26271cee36c40910e1d8bde12e7cd2`
+("Add app_wnd::set_icon_text() and GEMix desktop program icons."),
+the latest upstream commit at this update. It adds `app_wnd::set_icon_text()`
+to the previous pin `5643515827b329fcfe7c25caccc2451786c9a962`, which added
+`app_wnd::set_icon()` and
 includes the OPEN LOOK button-caption and single-line text alignment fixes.
-Both carried patches have been removed; no local dependency patches remain.
+Both previous carried patches have been removed. The editor scrollbar fix
+below is carried separately until included upstream.
 The fetch helper now preserves `--update` before assembling the patch list,
 so `make update-native` actually refreshes the selected ref.
+
+The main and compose windows call `set_icon_text("Blaise")` alongside
+`set_icon()`. OPEN LOOK displays this label below the minimized icon even
+when the window title changes to a folder or message subject.
+
+The OPEN LOOK debug build passed all 1,507 desktop assertions. An isolated
+olwm session with synthetic mail confirmed both X11 icon-name properties
+are “Blaise” while the window title is “Inbox - Blaise”; minimizing the
+window visibly displayed “Blaise” below the icon. The local capture is
+`build/ui-review/icon-label/minimized.png`.
+
+### OPEN LOOK message reader scrollbar
+
+`openlook-code-edit-scrollbar.patch` adds the missing native XView vertical
+scrollbar to `code_edit`, the styled control used by the message reader.
+The bar appears when the document exceeds the visible rows and hides for
+short messages. Native scrollbar requests scroll without moving the caret;
+wheel input, caret navigation, text changes and resizing synchronize its
+range and thumb. The shared editor clamps scrolling to the last full page.
+The patch includes the corresponding Native API and backend documentation.
+
+Validation: OPEN LOOK and SDL2 debug builds each pass 1,518 desktop checks,
+including long-message range, caret preservation, last-page navigation,
+resize and short-message reset. The OPEN LOOK XTest scenario checks that the
+native bar is visible, dragging it changes the reader's text pixels, and
+opening a short message hides it. The capture
+`build/ui-review/ports/linux-openlook-reader-scrolled.png` shows the final
+paragraph of the synthetic message after dragging to the bottom.
 
 ### Window icon API
 
@@ -246,7 +278,7 @@ older server can reintroduce menu or startup failures.
 ### GEM toolbar consistency
 
 Blaise pins Native commit
-`5643515827b329fcfe7c25caccc2451786c9a962` in
+`33ead4375d26271cee36c40910e1d8bde12e7cd2` in
 `scripts/build/fetch_native.sh`. Normal Make, CMake and VS Code builds fetch
 this revision automatically; no `NATIVE_ROOT` override is required. A custom
 Native checkout must include the shared toolbar and standard-icon APIs.

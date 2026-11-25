@@ -87,6 +87,7 @@ compose_window::compose_window(native::app_wnd &owner, app::engine &core,
       toolbar_(*this), status_(*this),
       attach_dialog_(*this, "Attach File") {
     set_icon(application_icon());
+    set_icon_text("Blaise");
     tab_sequence({&from_, &to_, &cc_, &bcc_, &subject_, &body_, &files_});
     build_toolbar();
     body_.set_show_line_numbers(false);

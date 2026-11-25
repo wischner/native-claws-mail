@@ -1,0 +1,211 @@
+diff --git a/docs/manuals/book-of-native/FEATURE-MATRIX.md b/docs/manuals/book-of-native/FEATURE-MATRIX.md
+index 1db083e..3c9497c 100644
+--- a/docs/manuals/book-of-native/FEATURE-MATRIX.md
++++ b/docs/manuals/book-of-native/FEATURE-MATRIX.md
+@@ -9,6 +9,13 @@ boxes preserve/wrap paragraphs, allow scrolling, and traverse their buttons.
+ 
+ # Feature Matrix
+ 
++## OPEN LOOK editor scrolling (2026-11-25)
++
++The painted `code_edit` host includes an automatic native XView vertical
++scrollbar. Its logical-row range and thumb follow document changes, wheel
++and caret navigation, and resizing; native scrollbar requests change the
++viewport without moving the selection. Short documents hide the bar.
++
+ ## Top-level window icons (2026-11-25)
+ 
+ `app_wnd::set_icon()` shares one `img` with a top-level window. Adapters fit
+diff --git a/docs/manuals/book-of-native/PATTERNS-CODE-EDIT.md b/docs/manuals/book-of-native/PATTERNS-CODE-EDIT.md
+index 33b548b..63e5fec 100644
+--- a/docs/manuals/book-of-native/PATTERNS-CODE-EDIT.md
++++ b/docs/manuals/book-of-native/PATTERNS-CODE-EDIT.md
+@@ -14,6 +14,14 @@ take keyboard focus even without native text items. Native key events deliver
+ text, editing commands, Shift-extended navigation and completion acceptance.
+ The application still owns insertion of an accepted completion.
+ 
++Its XView Panel also owns an automatic vertical scrollbar. The object and
++page lengths are logical rows from `line_count()` and
++`get_visible_line_count()`; `get_vertical_scroll_line()` supplies the thumb
++position. Native requests call `on_native_scroll(line)`, which clamps the
++viewport without moving the caret or selection. Repainting synchronizes
++the scrollbar after wheel, keyboard, text and size changes. Short documents
++hide the scrollbar.
++
+ ## Document and file boundaries
+ 
+ The document is always well-formed UTF-8 with `\n` line endings. Public
+diff --git a/docs/manuals/programming-native/15-SOURCE-EDITING.md b/docs/manuals/programming-native/15-SOURCE-EDITING.md
+index c202b1c..eaf9ac9 100644
+--- a/docs/manuals/programming-native/15-SOURCE-EDITING.md
++++ b/docs/manuals/programming-native/15-SOURCE-EDITING.md
+@@ -4,6 +4,12 @@ Use `code_edit` for UTF-8 source that needs line numbers, syntax styles,
+ diagnostics, debugger marks, and completion. Use `text_edit` for ordinary
+ fields and unstyled multiline text.
+ 
++OPEN LOOK supplies a vertical scrollbar automatically when the document is
++taller than the editor. Wheel and keyboard navigation keep it synchronized.
++For a painted editor, `get_vertical_scroll_line()` reports the first visible
++logical row and `get_visible_line_count()` reports its page size.
++`on_native_scroll(line)` scrolls to a clamped row without moving the caret.
++
+ ## Build a source editor step by step
+ 
+ 1. Keep a `code_edit` and a button as window members.
+diff --git a/docs/notes/CUSTOM.md b/docs/notes/CUSTOM.md
+index ed5622f..d453756 100644
+--- a/docs/notes/CUSTOM.md
++++ b/docs/notes/CUSTOM.md
+@@ -1,5 +1,11 @@
+ # Native Versus Custom Control Audit
+ 
++OPEN LOOK editor scrolling review (2026-11-25): `code_edit` retains its
++**C/H** kind, combining the portable styled document painter with an actual
++XView vertical scrollbar. The bar appears for overflow and follows wheel,
++caret and resize changes. Styled spans and editor overlays still require
++the shared painter; no application-painted scrollbar is introduced.
++
+ OPEN LOOK hosted-text review (2026-11-24): native Panel text fields retain
+ their **N** implementation. Keyboard dispatch publishes the windowless caret
+ item as the portable focus owner before delivering keys, so a toolbar canvas
+diff --git a/docs/standards/ARCHITECTURE.md b/docs/standards/ARCHITECTURE.md
+index 1088396..1356cbb 100644
+--- a/docs/standards/ARCHITECTURE.md
++++ b/docs/standards/ARCHITECTURE.md
+@@ -1367,6 +1367,13 @@ ranges in multiple-selection mode; native adapters retain the same modifiers.
+ 
+ ## 14. Source editing
+ 
++The painted editor exposes `get_vertical_scroll_line()` and
++`get_visible_line_count()` in logical rows. `on_native_scroll(line)` clamps
++to the last full page without changing the caret or selection. Wheel input
++uses the same range; caret revelation and resize keep that range valid.
++OPEN LOOK hosts an automatic native XView vertical scrollbar, synchronized
++when the editor repaints after text, navigation or geometry changes.
++
+ `code_edit` is the portable source editor and extends the overlapping
+ `text_edit` contract. Its private document contains canonical UTF-8 with `\n`
+ line endings. Every public position and span is a UTF-8 byte offset on a
+diff --git a/include/native/code_edit.h b/include/native/code_edit.h
+index 83fd455..106ea93 100644
+--- a/include/native/code_edit.h
++++ b/include/native/code_edit.h
+@@ -217,6 +217,15 @@ namespace native
+         // Return the number of logical source lines.
+         int line_count() const;
+ 
++        // Return the first visible logical line in the painted editor.
++        int get_vertical_scroll_line() const;
++
++        // Return the number of complete visible rows, at least one.
++        int get_visible_line_count() const;
++
++        // Scroll to a clamped logical line without moving the caret.
++        void on_native_scroll(int line);
++
+         // Return the zero-based line containing a byte offset.
+         int line_at(std::size_t byte_offset) const;
+ 
+diff --git a/lib/native/code_edit.cpp b/lib/native/code_edit.cpp
+index 4ef8be9..8dca166 100644
+--- a/lib/native/code_edit.cpp
++++ b/lib/native/code_edit.cpp
+@@ -739,18 +739,31 @@ namespace native
+         }
+     }
+ 
++    int code_edit::get_vertical_scroll_line() const {
++        return _first_visible_line;
++    }
++
++    int code_edit::get_visible_line_count() const {
++        return std::max(
++            1, static_cast<int>(get_dimensions().h) / line_height());
++    }
++
++    void code_edit::on_native_scroll(int line) {
++        _first_visible_line = std::clamp(
++            line, 0, std::max(0, line_count() - get_visible_line_count()));
++        invalidate();
++    }
++
+     void code_edit::reveal_caret() {
+         const int caret_line = _document->line_at(
+             std::min(_caret, _document->text().size()));
+-        const int visible = std::max(
+-            1,
+-            static_cast<int>(get_dimensions().h) / line_height());
++        const int visible = get_visible_line_count();
+         if (caret_line < _first_visible_line)
+             _first_visible_line = caret_line;
+         else if (caret_line >= _first_visible_line + visible)
+             _first_visible_line = caret_line - visible + 1;
+         _first_visible_line = std::clamp(
+-            _first_visible_line, 0, std::max(0, line_count() - 1));
++            _first_visible_line, 0, std::max(0, line_count() - visible));
+     }
+ 
+     std::size_t code_edit::ordered_selection_start() const {
+@@ -826,15 +839,8 @@ namespace native
+             return;
+         const int lines = std::max(
+             1, std::abs(static_cast<int>(event.delta)) / 24);
+-        _first_visible_line += event.delta > 0 ? -lines : lines;
+-        const int visible = std::max(
+-            1,
+-            static_cast<int>(get_dimensions().h) / line_height());
+-        _first_visible_line = std::clamp(
+-            _first_visible_line,
+-            0,
+-            std::max(0, line_count() - visible));
+-        invalidate();
++        on_native_scroll(
++            _first_visible_line + (event.delta > 0 ? -lines : lines));
+     }
+ 
+     void code_edit::handle_hover(point position) {
+diff --git a/lib/native/toolkits/openlook/collections.cpp b/lib/native/toolkits/openlook/collections.cpp
+index 7d774cd..be7faa8 100644
+--- a/lib/native/toolkits/openlook/collections.cpp
++++ b/lib/native/toolkits/openlook/collections.cpp
+@@ -131,7 +131,19 @@ namespace
+         const int scrollbar_extent = std::max(
+             1, scrollbar_width_for_scale(WIN_SCALE_MEDIUM));
+ 
+-        if (auto *icons = dynamic_cast<native::icon_view *>(&owner)) {
++        if (auto *editor = dynamic_cast<native::code_edit *>(&owner)) {
++            const int page = editor->get_visible_line_count();
++            configure_scrollbar(state.vertical_scrollbar,
++                                editor->line_count() > page,
++                                editor->line_count(),
++                                page,
++                                editor->get_vertical_scroll_line());
++            place_scrollbar(state.vertical_scrollbar,
++                            width - scrollbar_extent,
++                            0,
++                            scrollbar_extent,
++                            height);
++        } else if (auto *icons = dynamic_cast<native::icon_view *>(&owner)) {
+             const int object = std::max(
+                 1, static_cast<int>(icons->get_content_dimensions().h));
+             configure_scrollbar(state.vertical_scrollbar,
+@@ -310,7 +322,10 @@ namespace
+             const int start = static_cast<int>(xv_get(
+                 scrollbar, SCROLLBAR_VIEW_START));
+             if (scrollbar == state->vertical_scrollbar) {
+-                if (auto *icons =
++                if (auto *editor =
++                        dynamic_cast<native::code_edit *>(owner)) {
++                    editor->on_native_scroll(start);
++                } else if (auto *icons =
+                         dynamic_cast<native::icon_view *>(owner)) {
+                     icons->set_scroll_offset(start);
+                 } else if (auto *tree =
+@@ -853,6 +868,7 @@ namespace
+             linux::openlook::wnd_bindings.register_pair(panel, &owner);
+             configure_paint_window(owner, *state, paint_window);
+             const bool vertical =
++                dynamic_cast<native::code_edit *>(&owner) ||
+                 dynamic_cast<native::icon_view *>(&owner) ||
+                 dynamic_cast<native::tree_view *>(&owner) ||
+                 dynamic_cast<native::table_view *>(&owner);

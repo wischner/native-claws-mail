@@ -144,6 +144,7 @@ main_window::main_window(const app::options &settings)
       }),
       core_(settings.where, jobs_, *this, settings.connect) {
     set_icon(application_icon());
+    set_icon_text("Blaise");
     tab_sequence({&search_box_, &show_box_, &sort_box_, &folders_, &summary_, &message_pane_});
     // The window frame and toolbar/status rules enclose the outer edges.
     folders_.set_border_sides(native::border_sides::right);

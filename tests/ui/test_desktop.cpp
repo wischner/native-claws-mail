@@ -342,6 +342,36 @@ private:
                   std::string::npos);
             window_.run("toggleHeaders");
         });
+        act("long message scrolling", [this] {
+            auto &pane = window_.message_pane_;
+            const auto original = pane.get_bounds();
+            const auto raw = pane.raw();
+            std::string message = "Subject: Long message\r\n\r\n";
+            for (int line = 0; line < 150; ++line)
+                message += "Reading line " + std::to_string(line) + "\r\n";
+            pane.show_message(message, false);
+            CHECK(pane.line_count() > pane.get_visible_line_count());
+            CHECK(pane.get_vertical_scroll_line() == 0);
+            const auto caret = pane.get_caret_offset();
+            pane.on_native_scroll(20);
+            CHECK(pane.get_vertical_scroll_line() == 20);
+            CHECK(pane.get_caret_offset() == caret);
+            pane.on_native_scroll(pane.line_count());
+            CHECK(pane.get_vertical_scroll_line() ==
+                  pane.line_count() - pane.get_visible_line_count());
+            CHECK(pane.find_next("Reading line 149"));
+            CHECK(pane.get_vertical_scroll_line() > 0);
+            pane.set_dimensions(native::size(original.w(), original.h() / 2));
+            CHECK(pane.line_at(pane.get_caret_offset()) >=
+                  pane.get_vertical_scroll_line());
+            CHECK(pane.line_at(pane.get_caret_offset()) <
+                  pane.get_vertical_scroll_line() + pane.get_visible_line_count());
+            pane.set_bounds(original);
+            pane.show_note("Short message");
+            CHECK(pane.get_vertical_scroll_line() == 0);
+            CHECK(pane.line_count() <= pane.get_visible_line_count());
+            pane.show_message(raw, false);
+        });
         act("table keyboard scrolling and columns", [this] {
             auto &table = window_.summary_;
             const auto original = table.get_bounds();
