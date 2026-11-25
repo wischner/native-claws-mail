@@ -42,6 +42,15 @@ const native::resources &graphics_resources() {
     return pack;
 }
 
+std::shared_ptr<const native::img> application_icon() {
+    static const auto icon = [] {
+        const auto &entry = graphics_resources().get("icons.application");
+        return std::shared_ptr<const native::img>(new native::img(
+            native::img::decode(entry.data.data(), entry.data.size())));
+    }();
+    return icon;
+}
+
 std::shared_ptr<const native::img> tool_icon(std::string_view command) {
     // Ask Native first: GEM supplies the same bitmaps as Ted. Other
     // backends, mail actions and commands without stock artwork keep

@@ -2,6 +2,21 @@
     "version": 1,
     "resources": [
         {
+            "name": "icons.application",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "../../assets/icons/gem-blaise.png"
+                },
+                {
+                    "file": "../../assets/icons/openlook-blaise.png",
+                    "when": {
+                        "toolkit": "openlook"
+                    }
+                }
+            ]
+        },
+        {
             "name": "icons.toolbar.fileNew",
             "type": "icon",
             "variants": [

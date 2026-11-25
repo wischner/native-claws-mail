@@ -5,9 +5,51 @@ These extend [Native](https://github.com/wischner/native);
 commit Blaise builds against. A contract added to Native has to work on every
 backend, so nothing here is SDL2-only.
 
-## Dependency update — 2026-11-24
+## Dependency update — 2026-11-25
 
-The current pin is `f2211faeb8318f2c8b2546c29f0fd496a221fe85`, the latest
+The current pin is `5643515827b329fcfe7c25caccc2451786c9a962` ("Icon changes."),
+the latest upstream commit at this update. It adds `app_wnd::set_icon()` and
+includes the OPEN LOOK button-caption and single-line text alignment fixes.
+Both carried patches have been removed; no local dependency patches remain.
+The fetch helper now preserves `--update` before assembling the patch list,
+so `make update-native` actually refreshes the selected ref.
+
+### Window icon API
+
+`app_wnd::set_icon(std::shared_ptr<const native::img>)` shares an immutable
+image and returns the window for chaining. It can be called before creation
+(the image is cached and applied during creation) or afterward (the native
+window is updated immediately). `get_icon()` returns the shared image;
+assigning the same pointer does nothing, and `set_icon(nullptr)` restores
+the platform default.
+
+Supply one image, preferably square and at least 64 pixels. Native fits it
+into the backend's required sizes without distortion. `img` is neither
+copyable nor movable, so a decoded shared image can be initialized as:
+
+```cpp
+std::shared_ptr<const native::img> icon(
+    new native::img(native::img::load("assets/app.png")));
+window.set_icon(icon);
+```
+
+Windows uses title-bar/taskbar icons; X11, Motif, OPEN LOOK and Window Maker
+use their window-manager icon paths; SDL2 delegates to its video driver.
+On macOS only the main window sets the Dock image. Wayland/elementary,
+Haiku and GEM cache the image without displaying a per-window icon.
+System file dialogs retain their platform-owned chrome.
+
+The upstream references are `include/native/app_wnd.h`, Programming Native
+chapter 1's "Window icon" section, and The Book of Native's
+`PATTERNS-WINDOWS.md` "Top-level window icons" section, all under
+`build/deps/native`. Blaise now calls this API for the main and compose
+windows using the embedded `icons.application` resource. Its manifest selects
+the 64×64 OPEN LOOK asset for that toolkit and the corrected 32×32 GEM asset
+as the default, without backend checks in application code.
+
+## Previous dependency update — 2026-11-24
+
+The previous pin was `f2211faeb8318f2c8b2546c29f0fd496a221fe85`, the latest
 upstream commit at this update, after v1.1.0. It includes OPEN LOOK menu
 separator spacing, drawing, tab and hosted-text focus fixes. The previous Haiku parent
 lookup, Motif split layout and OPEN LOOK pane/focus patches are included
@@ -204,7 +246,7 @@ older server can reintroduce menu or startup failures.
 ### GEM toolbar consistency
 
 Blaise pins Native commit
-`f2211faeb8318f2c8b2546c29f0fd496a221fe85` in
+`5643515827b329fcfe7c25caccc2451786c9a962` in
 `scripts/build/fetch_native.sh`. Normal Make, CMake and VS Code builds fetch
 this revision automatically; no `NATIVE_ROOT` override is required. A custom
 Native checkout must include the shared toolbar and standard-icon APIs.

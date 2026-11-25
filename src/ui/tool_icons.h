@@ -19,6 +19,9 @@ namespace ui {
 // Return the immutable embedded graphics pack, owned for process lifetime.
 const native::resources &graphics_resources();
 
+// Return the shared application icon selected by the resource manifest.
+std::shared_ptr<const native::img> application_icon();
+
 // Return the icon of a toolbar command, or null when it has none.
 std::shared_ptr<const native::img> tool_icon(std::string_view command);
 

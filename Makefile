@@ -90,7 +90,7 @@ native:
 app: libs native
 	+flock "$(OBJROOT)/src.lock" $(MAKE) --no-print-directory -C src
 	@mkdir -p "$(BIN)"
-	@cp assets/icons/BLAISE.PNG "$(BIN)/BLAISE.PNG"
+	@cp assets/icons/gem-blaise.png "$(BIN)/BLAISE.PNG"
 resources: native
 	@mkdir -p "$(OBJROOT)"
 	+flock "$(OBJROOT)/src.lock" $(MAKE) --no-print-directory -C src resources

@@ -1,5 +1,11 @@
 # Blaise graphics resources
 
+`icons.application` embeds the PNGs from `assets/icons/`: `gem-blaise.png`
+is the default, and `openlook-blaise.png` has a `toolkit: openlook` selector.
+`ui::application_icon()` decodes the selected image once, and the main and
+compose windows pass it to `app_wnd::set_icon()`. Platform selection lives
+entirely in the manifest; the executable needs no loose PNGs.
+
 `blaise.json` declares 21 toolbar icons under `icons.toolbar.<command>`. Each has
 an unqualified color PNG and a `color: monochrome` PNG. Native's
 `resources::get()` selects the latter automatically on GEMix and X11.

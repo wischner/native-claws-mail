@@ -64,7 +64,7 @@ elseif(CMAKE_CROSSCOMPILING)
     message(FATAL_ERROR "Cross builds require BLAISE_RESOURCE_CPP; use scripts/build/platforms.py or generate it with make resources")
 else()
     set(resource_cpp "${CMAKE_BINARY_DIR}/resources/blaise.cpp")
-    file(GLOB resource_images CONFIGURE_DEPENDS src/resources/icons/*/*.png)
+    file(GLOB resource_images CONFIGURE_DEPENDS src/resources/icons/*/*.png assets/icons/*.png)
     add_custom_command(OUTPUT "${resource_cpp}"
         BYPRODUCTS "${CMAKE_BINARY_DIR}/resources/blaise.resources"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/resources"
@@ -82,7 +82,7 @@ target_link_libraries(blaise_ui PUBLIC blaise_core native)
 
 add_executable(blaise WIN32 src/main.cpp)
 # The desktop icon ships beside the executable (GEMiX converts it with resgen).
-configure_file(assets/icons/BLAISE.PNG "${CMAKE_BINARY_DIR}/bin/BLAISE.PNG" COPYONLY)
+configure_file(assets/icons/gem-blaise.png "${CMAKE_BINARY_DIR}/bin/BLAISE.PNG" COPYONLY)
 target_link_libraries(blaise PRIVATE blaise_ui)
 
 file(GLOB ui_tests CONFIGURE_DEPENDS tests/ui/test_*.cpp)

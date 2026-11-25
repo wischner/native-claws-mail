@@ -143,6 +143,7 @@ main_window::main_window(const app::options &settings)
           native::app::post(std::move(work));
       }),
       core_(settings.where, jobs_, *this, settings.connect) {
+    set_icon(application_icon());
     tab_sequence({&search_box_, &show_box_, &sort_box_, &folders_, &summary_, &message_pane_});
     // The window frame and toolbar/status rules enclose the outer edges.
     folders_.set_border_sides(native::border_sides::right);

@@ -7,13 +7,14 @@
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 url=${NATIVE_URL:-https://github.com/wischner/native.git}
-# Native post-v1.1.0 revision, including OPEN LOOK popup spacing and hosted-text focus;
+# Native post-v1.1.0 revision, including top-level window icons and OPEN LOOK fixes;
 # see docs/notes/NATIVE-CHANGES.md.
-ref=${NATIVE_REF:-f2211faeb8318f2c8b2546c29f0fd496a221fe85}
+ref=${NATIVE_REF:-5643515827b329fcfe7c25caccc2451786c9a962}
 dest="$root/build/deps/native"
 stamp="$root/build/deps/native.ref"
 # Carry backend fixes until they are in the pinned release.
 patches="$root/scripts/build/patches"
+update=${1:-}
 # The directory may be empty when the pin already contains every fix.
 set -- "$patches"/*.patch
 test -e "$1" || set --
@@ -21,7 +22,7 @@ want="$url $ref"
 if test $# -gt 0; then
     want="$want $(git hash-object "$@")"
 fi
-if test -e "$dest/include/native.h" && test "${1:-}" != --update &&
+if test -e "$dest/include/native.h" && test "$update" != --update &&
    test "$(cat "$stamp" 2>/dev/null)" = "$want"; then
     echo "$dest"
     exit 0

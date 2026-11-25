@@ -42,11 +42,11 @@ compiler, headers or `../native` checkout:
   Dockerfile builds a new image. `DOCKER_IMAGE=...` uses another image.
 - **Native.** [Native](https://github.com/wischner/native) is fetched into
   `build/deps/native` at the commit pinned in `scripts/build/fetch_native.sh`.
-  The pin is Native commit `f2211fa`, newer than v1.1.0, including the
-  OPEN LOOK popup-spacing and toolbar-text focus fixes. The previous Haiku,
-  Motif and OPEN LOOK control patches are included upstream. A temporary SDK
-  patch centers OPEN LOOK button captions, and a backend patch centers
-  single-line field text. See
+  The pin is Native commit `5643515`, newer than v1.1.0, including
+  `app_wnd::set_icon()` and the OPEN LOOK popup-spacing, toolbar-text focus,
+  button-caption and single-line text alignment fixes. The previous Haiku,
+  Motif and OPEN LOOK patches are included upstream; no local dependency
+  patches remain. See
   [Native integration](docs/notes/NATIVE-CHANGES.md).
   `NATIVE_REF=<commit, tag or branch> make` builds another revision;
   `NATIVE_ROOT=/path/to/native make` builds against your own checkout.
@@ -187,10 +187,15 @@ on hosts that preload a security agent; see [that note](docs/notes/HOST-ASAN.md)
 
 ## Desktop icon
 
-Blaise's desktop icon is [`assets/icons/BLAISE.PNG`](assets/icons/BLAISE.PNG): 32x32
-pixels, black ink on white paper, transparent outside the icon. The build
-copies it next to the executable: `make` writes `bin/BLAISE.PNG`, and every
-release zip has `BLAISE.PNG` beside `blaise`.
+Blaise embeds the corrected 32×32 [GEM icon](assets/icons/gem-blaise.png) and
+the 64×64 [OPEN LOOK icon](assets/icons/openlook-blaise.png). Native's resource
+manifest selects the OPEN LOOK artwork on that toolkit and the GEM artwork
+as the default. The main and compose windows use `app_wnd::set_icon()`, so
+OPEN LOOK displays its icon when the window is minimized. No external image
+files are needed at runtime.
+
+For GEM Desktop installation, the build also copies the GEM asset next to the
+executable as `bin/BLAISE.PNG`; release zips retain that filename.
 
 To build a GEMiX image, take `BLAISE.PNG` from the `linux-gemix-gemd` release
 zip, convert it with GEM's `resgen` and install it under the lowercase program
